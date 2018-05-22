@@ -46,7 +46,7 @@ img_ht = 256
 def set_network():
     # Pixel2pixel networks
     netG = models.CEGenerator(in_channels=3)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=6)
+    netD = models.Discriminator(in_channels=3)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -83,7 +83,8 @@ def train():
             real_out = batch.data[1].as_in_context(ctx)
 
             fake_out = netG(real_in)
-            fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
+            fake_concat = image_pool.query(fake_out)
+            #fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
             with autograd.record():
                 # Train with fake image
                 # Use image pooling to utilize history images
@@ -93,7 +94,7 @@ def train():
                 metric.update([fake_label, ], [output, ])
 
                 # Train with real image
-                real_concat = nd.concat(real_in, real_out, dim=1)
+                real_concat = real_out
                 output = netD(real_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
@@ -108,7 +109,7 @@ def train():
             ###########################
             with autograd.record():
                 fake_out = netG(real_in)
-                fake_concat = nd.concat(real_in, fake_out, dim=1)
+                fake_concat = fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
