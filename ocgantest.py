@@ -31,9 +31,9 @@ lr = 0.0002
 beta1 = 0.5
 lambda1 = 100
 pool_size = 50
-datapath = '/home/labuser/Documents/data/'
+datapath = '../'
 dataset = 'Caltech256'
-expname = 'expAE'
+expname = 'expce'
 img_wd = 256
 img_ht = 256
 testclasspaths = []
@@ -71,22 +71,26 @@ with open(dataset+"_"+expname+"_testlist.txt" , 'r') as f:
             testclasslabels.append(0)
         else:
             testclasslabels.append(1)
-
-test_data = load_image.load_test_images(testclasspaths,testclasslabels, img_wd, img_ht, batch_size)
-
+print(np.shape(testclasslabels))
+print(batch_size)
+print(np.shape(testclasspaths))
+print('Loading data')
+test_data = load_image.load_test_images(testclasspaths,testclasslabels,batch_size, img_wd, img_ht, ctx=ctx)
+print('Loading Done')
 
 # Loss
 GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 L1_loss = gluon.loss.L1Loss()
-netG, netD, trainerG, set_network()
-netG.load_params('checkpoints/testnet_190_G.params', ctx=ctx)
-netD.load_params('checkpoints/testnet_190_D.params', ctx=ctx)
-
+netG, netD, trainerG, trainerD = set_network()
+netG.load_params('checkpoints/testnet_40_G.params', ctx=ctx)
+netD.load_params('checkpoints/testnet_40_D.params', ctx=ctx)
+print('Loading model done')
 
 lbllist = [];
 scorelist = [];
 test_data.reset()
 count = 0
+print('testing')
 for batch in (test_data):
     print(count)
     count+=1

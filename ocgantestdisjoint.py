@@ -33,7 +33,7 @@ lambda1 = 100
 pool_size = 50
 datapath = '/home/labuser/Documents/data/'
 dataset = 'Caltech256'
-expname = 'expAE'
+expname = 'expcedisjoint'
 img_wd = 256
 img_ht = 256
 testclasspaths = []
@@ -72,15 +72,14 @@ with open(dataset+"_"+expname+"_testlist.txt" , 'r') as f:
         else:
             testclasslabels.append(1)
 
-test_data = load_image.load_test_images(testclasspaths,testclasslabels, img_wd, img_ht, batch_size)
-
+test_data = load_image.load_test_images(testclasspaths,testclasslabels,batch_size, img_wd, img_ht, ctx=ctx)
 
 # Loss
 GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 L1_loss = gluon.loss.L1Loss()
 netG, netD, trainerG, trainerD = set_network()
-netG.load_params('checkpoints/testnet_190_G.params', ctx=ctx)
-netD.load_params('checkpoints/testnet_190_D.params', ctx=ctx)
+netG.load_params('checkpoints/testnet_30_G.params', ctx=ctx)
+netD.load_params('checkpoints/testnet_30_D.params', ctx=ctx)
 
 
 lbllist = [];

@@ -23,21 +23,21 @@ from datetime import datetime
 import time
 import logging
 
-logging.basicConfig()
+#logging.basicConfig()
 
-epochs = 200
+epochs = 51
 batch_size = 10
 use_gpu = True
-graphvis = True
-#ctx = mx.gpu() if use_gpu else mx.cpu()
-ctx = mx.cpu()
+graphvis = False
+ctx = mx.gpu() if use_gpu else mx.cpu()
+#ctx = mx.cpu()
 lr = 0.0002
 beta1 = 0.5
-lambda1 = 100
+lambda1 = 0.4
 pool_size = 50
-datapath = '/users/pramudi/Documents/data/'
+datapath = '../'
 dataset = 'Caltech256'
-expname = 'expce'
+expname = 'expcedisjoint'
 img_wd = 256
 img_ht = 256
 
@@ -160,18 +160,13 @@ def print_result():
 
 inclasspaths = dload.loadPaths(dataset, datapath, expname)
 train_data, val_data = load_image.load_image(inclasspaths, batch_size, img_wd, img_ht)
+print('Data loading done.')
 #visual.preview_train_data(train_data)
 GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 L1_loss = gluon.loss.L1Loss()
 netG, netD, trainerG, trainerD = set_network()
 if graphvis:
     print(netG)
-    from mxboard import SummaryWriter
-    netG.hybridize()
-    #netG.initialize()
-    netG.forward(mx.nd.ones((1, 3, 256, 256)))
-    with SummaryWriter(logdir='./logs') as sw:
-        sw.add_graph(netG)
-print(DF)
+print('training')
 train()
-print_result()
+#print_result()
