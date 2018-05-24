@@ -23,21 +23,30 @@ import logging
 
 
 
-epochs = 200
-batch_size = 10
-use_gpu = True
-ctx = mx.gpu() if use_gpu else mx.cpu()
-lr = 0.0002
-beta1 = 0.5
-lambda1 = 100
-pool_size = 50
-datapath = '/home/labuser/Documents/data/'
-dataset = 'Caltech256'
-expname = 'expcedisjoint'
-img_wd = 256
-img_ht = 256
-testclasspaths = []
-testclasslabels = []
+import argparse
+#logging.basicConfig()
+
+def train_options():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--expname", default="expce", help="Name of the experiment")
+    parser.add_argument("--batch_size", default=32, type=int, help="Batch size per iteration")
+    parser.add_argument("--epochs", default=1001, type=int,
+                        help="Number of epochs for training")
+    parser.add_argument("--use_gpu", default=1, type=int,  help="1 to use GPU  ")
+    parser.add_argument("--dataset", default="Caltech256",
+                        help="Specify the training dataset  ")
+    parser.add_argument("--ngf", default=64, type=int, help="Number of base filters")
+    parser.add_argument("--datapath", default='/users/pramudi/Documents/data/', help="Data path")
+    parser.add_argument("--img_wd", default=256, type=int, help="Image width")
+    parser.add_argument("--img_ht", default=256, type=int, help="Image height")
+    parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
+    args = parser.parse_args()
+    if args.use_gpu == 1:
+        args.use_gpu = True
+    else:
+        args.use_gpu = False
+    
+    return args
 
 
 def facc(label, pred):
@@ -72,16 +81,12 @@ with open(dataset+"_"+expname+"_testlist.txt" , 'r') as f:
         else:
             testclasslabels.append(1)
 
-test_data = load_image.load_test_images(testclasspaths,testclasslabels,batch_size, img_wd, img_ht, ctx=ctx)
-
-# Loss
-GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
-L1_loss = gluon.loss.L1Loss()
-netG, netD, trainerG, trainerD = set_network()
-netG.load_params('checkpoints/testnet_200_G.params', ctx=ctx)
-netD.load_params('checkpoints/testnet_200_D.params', ctx=ctx)
-
-
+testclasspaths = []
+testclasslabels = []
+test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx=opt.ctx)
+netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
+netG.load_params('checkpoints/'+opt.expname+'_'+opt.epochs+'_G.params', ctx=opt.ctx)
+netD.load_params('checkpoints/'+opt.expname+'_'+opt.epochs+'_D.params', ctx=opt.ctx)
 lbllist = [];
 scorelist = [];
 test_data.reset()
