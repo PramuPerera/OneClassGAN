@@ -124,7 +124,7 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
             netG.save_params(filename)
             # Visualize one generated image for each epoch
-            fake_img = fake_out[0]
+            fake_img = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
         #

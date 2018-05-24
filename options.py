@@ -48,6 +48,7 @@ def test_options():
     parser.add_argument("--img_wd", default=256, type=int, help="Image width")
     parser.add_argument("--img_ht", default=256, type=int, help="Image height")
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
+    parser.add_argument("--noisevar", default=0.02, type=float, help="variance of noise added to input")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True

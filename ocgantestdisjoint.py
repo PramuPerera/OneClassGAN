@@ -62,7 +62,7 @@ def main(opt):
             else:
                 testclasslabels.append(1)
 
-    test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx=ctx)
+    test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
     netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, 0, 0, opt.ngf)
     netG.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_G.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
@@ -70,6 +70,7 @@ def main(opt):
     scorelist1 = [];
     scorelist2 = [];
     scorelist3 = [];
+    scorelist4 = [];
     test_data.reset()
     count = 0
     for batch in (test_data):
@@ -77,6 +78,8 @@ def main(opt):
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
+        out = (netG(real_out))
+        output4 = nd.mean((netD(out)), (1, 3, 2)).asnumpy()    
         out = (netG(real_in))
         #real_concat = nd.concat(out, out, dim=1)
         output = netD(out) #Denoised image
@@ -88,14 +91,16 @@ def main(opt):
         scorelist1 = scorelist1+list(output)
         scorelist2 = scorelist2+list(output2)
         scorelist3 = scorelist3+list(output3)
+        scorelist4 = scorelist4+list(output4)
     fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
     roc_auc1 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
     roc_auc2 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist3, 1)
     roc_auc3 = auc(fpr, tpr)
-    
-    return([roc_auc1, roc_auc2, roc_auc3])
+    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
+    roc_auc4 = auc(fpr, tpr)
+    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
 
 if __name__ == "__main__":
     opt = options.test_options()

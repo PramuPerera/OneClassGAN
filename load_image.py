@@ -4,7 +4,7 @@ from mxnet import gluon
 from mxnet import ndarray as nd
 import numpy as np
 
-def load_image(fnames, batch_size, img_wd, img_ht, is_reversed=False):
+def load_image(fnames, batch_size, img_wd, img_ht,noisevar=0.2 , is_reversed=False):
     img_in_list = []
     img_out_list = []
     shuffle(fnames)
@@ -14,7 +14,7 @@ def load_image(fnames, batch_size, img_wd, img_ht, is_reversed=False):
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
         # Crop input and output images
         croppedimg = mx.image.fixed_crop(img_arr, 0, 0, img_wd, img_ht)
-        img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, 0.2, croppedimg.shape),
+        img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, noisevar, croppedimg.shape),
                                    croppedimg]
         img_arr_in, img_arr_out = [nd.transpose(img_arr_in, (2, 0, 1)),
                                    nd.transpose(img_arr_out, (2, 0, 1))]
@@ -31,13 +31,13 @@ def load_image(fnames, batch_size, img_wd, img_ht, is_reversed=False):
     itertrain = mx.io.NDArrayIter(data=[nd.concat(*train_list_in, dim=0), nd.concat(*train_list_out, dim=0)],
                                   batch_size=batch_size)
     iterval = mx.io.NDArrayIter(data=[nd.concat(*val_list_in, dim=0), nd.concat(*val_list_out, dim=0)],
-                                batch_size=batch_size)
+                                batch_size=int(batch_size/5.0))
 
     return [itertrain, iterval]
 
 
 
-def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, is_reversed=False):
+def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, noisevar=0.2, is_reversed=False):
     img_in_list = []
     img_out_list = []
     #shuffle(fnames)
@@ -46,7 +46,7 @@ def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, is_reversed=F
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
         # Crop input and output images
         croppedimg = mx.image.fixed_crop(img_arr, 0, 0, img_wd, img_ht)
-        img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, 0.2, croppedimg.shape),
+        img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, noisevar , croppedimg.shape),
                                    croppedimg]
         img_arr_in, img_arr_out = [nd.transpose(img_arr_in, (2, 0, 1)),
                                    nd.transpose(img_arr_out, (2, 0, 1))]
