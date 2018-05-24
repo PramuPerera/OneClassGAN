@@ -40,7 +40,7 @@ def load_image(fnames, batch_size, img_wd, img_ht, is_reversed=False):
 def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, is_reversed=False):
     img_in_list = []
     img_out_list = []
-    shuffle(fnames)
+    #shuffle(fnames)
     for img in fnames:
         img_arr = mx.image.imread(img).astype(np.float32)/127.5 - 1
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
@@ -59,5 +59,5 @@ def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, is_reversed=F
     templbl = mx.nd.array(lbl)
     itertest = mx.io.NDArrayIter(data=tempdata, label=templbl,
                                   batch_size=batch_size)
-
+    print(lbl)
     return itertest

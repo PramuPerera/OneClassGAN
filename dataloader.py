@@ -19,6 +19,7 @@ def loadPaths(dataset, datapath, expname):
     inclasses = np.random.permutation(np.arange(len(valid_folders)))[0:3]
     inclasses = [valid_folders[i] for i in inclasses]
     inclasses = ['092.grapes', '109.hot-tub', '148.mussels']
+    #inclasses = ['092.grapes']
     print(inclasses)
 
     # first 150 of each image is treated as training. remainder is treated as testing

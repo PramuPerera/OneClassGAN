@@ -49,8 +49,8 @@ def facc(label, pred):
 
 def set_network():
     # Pixel2pixel networks
-    netG = models.CEGenerator(in_channels=3)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3)
+    netG = models.CEGenerator(in_channels=3, istest=True)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD = models.Discriminator(in_channels=3, istest=True)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -78,8 +78,8 @@ test_data = load_image.load_test_images(testclasspaths,testclasslabels,batch_siz
 GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 L1_loss = gluon.loss.L1Loss()
 netG, netD, trainerG, trainerD = set_network()
-netG.load_params('checkpoints/testnet_30_G.params', ctx=ctx)
-netD.load_params('checkpoints/testnet_30_D.params', ctx=ctx)
+netG.load_params('checkpoints/testnet_200_G.params', ctx=ctx)
+netD.load_params('checkpoints/testnet_200_D.params', ctx=ctx)
 
 
 lbllist = [];
@@ -95,7 +95,7 @@ for batch in (test_data):
     out = (netG(real_in))
     real_concat = real_in
     #real_concat = nd.concat(out, out, dim=1)
-    output = netD(real_concat)
+    output = netD(real_out)#netD(real_concat)
     output = nd.mean(output, (1, 3, 2)).asnumpy()
     lbllist = lbllist+list(lbls.asnumpy())
     scorelist = scorelist+list(output)
@@ -104,6 +104,6 @@ for batch in (test_data):
 
 print((lbllist))
 print((scorelist))
-fpr, tpr, _ = roc_curve(lbllist, scorelist, 0)
+fpr, tpr, _ = roc_curve(lbllist, scorelist, 1)
 roc_auc = auc(fpr, tpr)
 print(roc_auc)

@@ -49,8 +49,8 @@ def facc(label, pred):
 
 def set_network():
     # Pixel2pixel networks
-    netG = models.CEGenerator(in_channels=3)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=6)
+    netG = models.CEGenerator(in_channels=3, istest=True)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD = models.Discriminator(in_channels=6, istest=True)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)

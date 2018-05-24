@@ -25,28 +25,28 @@ import logging
 
 #logging.basicConfig()
 
-epochs = 51
-batch_size = 10
+epochs = 1001
+batch_size = 32
 use_gpu = True
 graphvis = False
 ctx = mx.gpu() if use_gpu else mx.cpu()
 #ctx = mx.cpu()
 lr = 0.0002
 beta1 = 0.5
-lambda1 = 10
+lambda1 = 500
 pool_size = 50
 datapath = '../'
 dataset = 'Caltech256'
 expname = 'expcedisjoint'
 img_wd = 256
 img_ht = 256
-noisevar = 0.0
+noisevar = 0.02
 
 
 def set_network():
     # Pixel2pixel networks
-    netG = models.CEGenerator(in_channels=3)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3)
+    netG = models.CEGenerator(in_channels=3, n_layers=4)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD = models.Discriminator(in_channels=3, n_layers =4)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -133,14 +133,14 @@ def train():
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
         if epoch%10 ==0:
-            filename = "checkpoints/testnet_"+str(epoch)+"_D.params"
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
-            filename = "checkpoints/testnet_"+str(epoch)+"_G.params"
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
             netG.save_params(filename)
             # Visualize one generated image for each epoch
             fake_img = fake_out[0]
             visual.visualize(fake_img)
-            plt.savefig('outputs/testnet_'+str(epoch)+'.png')
+            plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
         #
 
 
