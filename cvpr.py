@@ -61,8 +61,8 @@ def train_options():
 
 def set_network(depth, ctx, lr, beta1, ngf):
     # Pixel2pixel networks
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers =depth, ngf=ngf)
+    netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
