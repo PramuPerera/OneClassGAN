@@ -59,5 +59,4 @@ def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, is_reversed=F
     templbl = mx.nd.array(lbl)
     itertest = mx.io.NDArrayIter(data=tempdata, label=templbl,
                                   batch_size=batch_size)
-    print(lbl)
     return itertest

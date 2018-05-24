@@ -80,14 +80,14 @@ def main(opt):
         out = (netG(real_in))
         #real_concat = nd.concat(out, out, dim=1)
         output = netD(out) #Denoised image
-        output3 = nd.mean(output-real_out, (1, 3, 2)).asnumpy() #denoised-real
+        output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
         output = nd.mean(output, (1, 3, 2)).asnumpy()
         output2 = netD(real_out) #Image with no noise
         output2 = nd.mean(output2, (1, 3, 2)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())
         scorelist1 = scorelist1+list(output)
-        scorelist2 = scorelist2+list(output)
-        scorelist3 = scorelist3+list(output)
+        scorelist2 = scorelist2+list(output2)
+        scorelist3 = scorelist3+list(output3)
     fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
     roc_auc1 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
