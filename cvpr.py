@@ -46,7 +46,7 @@ def facc(label, pred):
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
-def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size):
+def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname):
         
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
     L1_loss = gluon.loss.L1Loss()
@@ -152,5 +152,5 @@ netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, 
 if opt.graphvis:
     print(netG)
 print('training')
-train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size)
+train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname)
 

@@ -8,7 +8,7 @@ def load_image(fnames, batch_size, img_wd, img_ht, is_reversed=False):
     img_in_list = []
     img_out_list = []
     shuffle(fnames)
-
+    print(np.shape(fnames))
     for img in fnames:
         img_arr = mx.image.imread(img).astype(np.float32)/127.5 - 1
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
