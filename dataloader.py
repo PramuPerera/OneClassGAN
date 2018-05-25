@@ -49,7 +49,7 @@ def loadPaths(dataset, datapath, expname):
     nofentriesperclass = int(np.size(inclasslabels)/np.size(validation_set))
     for nclass in validation_set:
          dirs = os.listdir(datapath + dataset + '/' + nclass)
-        for nfile in range(nofentriesperclass):
+         for nfile in range(nofentriesperclass):
             validationclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             validationclasslabels.append(-1)
     text_file = open(dataset + "_" + expname + "_validationlist.txt", "w")        

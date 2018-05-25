@@ -14,8 +14,11 @@ def load_image(fnames, batch_size, img_wd, img_ht,noisevar=0.2 , is_reversed=Fal
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
         # Crop input and output images
         croppedimg = mx.image.fixed_crop(img_arr, 0, 0, img_wd, img_ht)
-        img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, noisevar, croppedimg.shape),
-                                   croppedimg]
+	if noisevar>0: 
+        	img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, noisevar, croppedimg.shape),
+                	                   croppedimg]
+	else: 
+		img_arr_in, img_arr_out = [croppedimg, croppedimg]
         img_arr_in, img_arr_out = [nd.transpose(img_arr_in, (2, 0, 1)),
                                    nd.transpose(img_arr_out, (2, 0, 1))]
         img_arr_in, img_arr_out = [img_arr_in.reshape((1,) + img_arr_in.shape),
@@ -46,9 +49,12 @@ def load_test_images(fnames, lbl, batch_size, img_wd, img_ht, ctx, noisevar=0.2,
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
         # Crop input and output images
         croppedimg = mx.image.fixed_crop(img_arr, 0, 0, img_wd, img_ht)
-        img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, noisevar , croppedimg.shape),
-                                   croppedimg]
-        img_arr_in, img_arr_out = [nd.transpose(img_arr_in, (2, 0, 1)),
+	if noisevar>0:
+       		img_arr_in, img_arr_out = [croppedimg+mx.random.normal(0, noisevar , croppedimg.shape),
+                	                   croppedimg]
+        else:
+                img_arr_in, img_arr_out = [croppedimg, croppedimg]
+	img_arr_in, img_arr_out = [nd.transpose(img_arr_in, (2, 0, 1)),
                                    nd.transpose(img_arr_out, (2, 0, 1))]
         img_arr_in, img_arr_out = [img_arr_in.reshape((1,) + img_arr_in.shape),
                                    img_arr_out.reshape((1,) + img_arr_out.shape)]

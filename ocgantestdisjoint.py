@@ -53,7 +53,7 @@ def main(opt):
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
     testclasspaths = []
     testclasslabels = []
-    if istest:
+    if opt.istest:
         filename = '_testlist.txt'
     else:
         filename = '_validationlist.txt'        

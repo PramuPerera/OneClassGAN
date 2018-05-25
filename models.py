@@ -114,7 +114,7 @@ class Discriminator(HybridBlock):
 
     def hybrid_forward(self, F, x):
         out = self.model(x)
-        # print(out)
+        #print(np.shape(out))
         return out
 
 
