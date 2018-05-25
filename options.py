@@ -49,10 +49,16 @@ def test_options():
     parser.add_argument("--img_ht", default=256, type=int, help="Image height")
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
     parser.add_argument("--noisevar", default=0.02, type=float, help="variance of noise added to input")
+    parser.add_argument("--istest", default=1, type=float, help="if test set 1, otherwise validation")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
     else:
         args.use_gpu = False
-    
+        
+    if args.istest == 1:
+        args.istest = True
+    else:
+        args.istest = False
+        
     return args

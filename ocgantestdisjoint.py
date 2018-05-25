@@ -53,8 +53,11 @@ def main(opt):
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
     testclasspaths = []
     testclasslabels = []
-
-    with open(opt.dataset+"_"+opt.expname+"_testlist.txt" , 'r') as f:
+    if istest:
+        filename = '_testlist.txt'
+    else:
+        filename = '_validationlist.txt'        
+    with open(opt.dataset+"_"+opt.expname+filename , 'r') as f:
         for line in f:
             testclasspaths.append(line.split(' ')[0])
             if int(line.split(' ')[1])==-1:

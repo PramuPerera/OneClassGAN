@@ -31,7 +31,8 @@ def loadPaths(dataset, datapath, expname):
         for nfile in range(151, len(dirs)):
             testclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             testclasslabels.append(lbl)
-
+    validationclasspaths = list(testclasspaths)
+    validationclasslabels = list(testclasslabels)
     # pick 50% of images from clutter class
     cluttersize = int(round(len(testclasslabels) * 0.5))
     dirs = os.listdir(datapath + dataset + '/' + folders[-1])
@@ -43,5 +44,16 @@ def loadPaths(dataset, datapath, expname):
     for fn, lbl in zip(testclasspaths, testclasslabels):
         text_file.write("%s %s\n" % (fn, str(lbl)))
     text_file.close()
-
+    #consider 'other' classes and get paths of their samples for validation
+    validation_set = list(set(valid_folders)^set(inclasses))
+    nofentriesperclass = int(np.size(inclasslabels)/np.size(validation_set))
+    for nclass in validation_set:
+         dirs = os.listdir(datapath + dataset + '/' + nclass)
+        for nfile in range(nofentriesperclass):
+            validationclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
+            validationclasslabels.append(-1)
+    text_file = open(dataset + "_" + expname + "_validationlist.txt", "w")        
+    for fn, lbl in zip(validationclasspaths, validationclasslabels):
+        text_file.write("%s %s\n" % (fn, str(lbl)))
+    text_file.close()    
     return inclasspaths
