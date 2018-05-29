@@ -30,7 +30,7 @@ import options
 def set_network(depth, ctx, lr, beta1, ngf):
     # Pixel2pixel networks
     netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, threeway=True)
+    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=True)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -45,7 +45,9 @@ def set_network(depth, ctx, lr, beta1, ngf):
 def facc(label, pred):
     pred = pred.ravel()
     label = label.ravel()
-    return ((pred > 0.5) == label).mean()
+    #print(np.shape(pred))
+    #print([np.argmax(pred),label])
+    return np.mean(np.argmax(pred)  == label)
 
 def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname):
 
@@ -78,16 +80,18 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 # Train with fake image
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
-                fake_label = nd.zeros(output.shape, ctx=ctx)
-                fake_label(:,0)=1
+                fake_label = nd.zeros(output.shape[0], ctx=ctx)
+               
+		#print(np.shape(output))
+		#print((fake_label))
                 errD_fake = threewayloss(output, fake_label)
                 metric.update([fake_label, ], [output, ])
 
                 # Train with real image
                 real_concat = real_out
                 output = netD(real_concat)
-                real_label = nd.zeros(output.shape, ctx=ctx)
-                fake_label(:,1)=1
+                real_label = nd.ones(output.shape[0], ctx=ctx)
+                
                 errD_real = threewayloss(output, real_label)
                 errD = (errD_real + errD_fake) * 0.5
                 errD.backward()
@@ -102,8 +106,8 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 fake_out = netG(real_in)
                 fake_concat = fake_out
                 output = netD(fake_concat)
-                real_label = nd.zeros(output.shape, ctx=ctx)
-                real_label(:,1)=1
+                real_label = nd.ones(output.shape[0], ctx=ctx)
+                
                 errG = threewayloss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
