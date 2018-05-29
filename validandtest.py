@@ -1,7 +1,8 @@
 import options
 import ocgantestdisjoint
 import numpy as np
-
+import random
+random.seed(1000)
 opt = options.test_options()
 opt.istest = 0
 #First use the validation set to pick best model
@@ -27,7 +28,7 @@ print('Validation Done')
 i = np.argmin(np.array(auc1))
 opt.epochs = ran[i]
 opt.istest=0
-print(i)
+print(ran[i])
 print("AUC for criterion 1 (val): " + str(ocgantestdisjoint.main(opt)[0]))
 opt.istest=1
 print("AUC for criterion 1 (test): " + str(ocgantestdisjoint.main(opt)[0]))
@@ -38,7 +39,7 @@ print("AUC for criterion 1 (test): " + str(ocgantestdisjoint.main(opt)[0]))
 i = np.argmin(np.array(auc2))
 opt.epochs = ran[i]
 opt.istest=0
-print(i)
+print(ran[i])
 print("AUC for criterion 2 (val): " + str(ocgantestdisjoint.main(opt)[1]))
 opt.istest=1
 print("AUC for criterion 2 (test): " + str(ocgantestdisjoint.main(opt)[1]))
@@ -49,7 +50,7 @@ print("AUC for criterion 2 (test): " + str(ocgantestdisjoint.main(opt)[1]))
 i = np.argmin(np.array(auc3))
 opt.epochs = ran[i]
 opt.istest=0
-print(i)
+print(ran[i])
 print("AUC for criterion 3 (val): " + str(ocgantestdisjoint.main(opt)[2]))
 opt.istest=1
 print("AUC for criterion 3 (test): " + str(ocgantestdisjoint.main(opt)[2]))
@@ -60,7 +61,7 @@ print("AUC for criterion 3 (test): " + str(ocgantestdisjoint.main(opt)[2]))
 i = np.argmin(np.array(auc4))
 opt.epochs = ran[i]
 opt.istest=0
-print(i)
+print(ran[i])
 print("AUC for criterion 4 (val): " + str(ocgantestdisjoint.main(opt)[3]))
 opt.istest=1
 print("AUC for criterion 4 (test): " + str(ocgantestdisjoint.main(opt)[3]))

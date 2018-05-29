@@ -207,7 +207,7 @@ class CEGenerator(HybridBlock):
                                   use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult, use_global_stats=istest))
             self.model.add(LeakyReLU(alpha=0.2))
-
+	    #self.model.add(Activation(activation='sigmoid'))
             # Decoder
             self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=1,
                                            padding=padding, in_channels=ndf * nf_mult,

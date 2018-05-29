@@ -13,6 +13,7 @@ from mxnet.gluon.nn import Dense, Activation, Conv2D, Conv2DTranspose, \
     BatchNorm, LeakyReLU, Flatten, HybridSequential, HybridBlock, Dropout
 from mxnet import autograd
 import numpy as np
+import random
 from random import shuffle
 import dataloader as dload
 import load_image
@@ -110,9 +111,9 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 logging.info(
-                    'discriminator loss = %f, generator loss = %f, binary training acc = %f at iter %d epoch %d'
+                    'discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
                     % (nd.mean(errD).asscalar(),
-                       nd.mean(errG).asscalar(), acc, iter, epoch))
+                       nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
             iter = iter + 1
             btic = time.time()
 
@@ -146,6 +147,8 @@ def print_result():
 
 
 opt = options.train_options()        
+if opt.seed != -1:
+	random.seed(opt.seed)
 ctx = mx.gpu() if opt.use_gpu else mx.cpu()
 inclasspaths = dload.loadPaths(opt.dataset, opt.datapath, opt.expname)
 train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)

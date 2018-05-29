@@ -21,6 +21,7 @@ def train_options():
     parser.add_argument("--graphvis", default=0,   help="1 to visualize the model")
     parser.add_argument("--noisevar", default=0.02, type=float, help="variance of noise added to input")
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
+    parser.add_argument("--seed", default=-1, type=float, help="Seed generator. Use -1 for random.")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
