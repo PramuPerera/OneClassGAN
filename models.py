@@ -79,7 +79,7 @@ class UnetGenerator(HybridBlock):
 
 # Define the PatchGAN discriminator
 class Discriminator(HybridBlock):
-    def __init__(self, in_channels, ndf=64, n_layers=3, use_sigmoid=False, use_bias=False, istest = False):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_sigmoid=False, use_bias=False, istest = False, isthreeway = False):
         super(Discriminator, self).__init__()
 
         with self.name_scope():
@@ -109,8 +109,12 @@ class Discriminator(HybridBlock):
             self.model.add(LeakyReLU(alpha=0.2))
             self.model.add(Conv2D(channels=1, kernel_size=kernel_size, strides=1,
                                   padding=padding, in_channels=ndf * nf_mult))
-            if use_sigmoid:
+            if isthreeway:
+                self.model.add(gluon.nn.Dense(3))
+            elif use_sigmoid:
                 self.model.add(Activation(activation='sigmoid'))
+
+            
 
     def hybrid_forward(self, F, x):
         out = self.model(x)
@@ -177,7 +181,7 @@ class CEGenerator(HybridBlock):
 
 
 class CEGenerator(HybridBlock):
-    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False ):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, usetanh = False ):
         super(CEGenerator, self).__init__()
 
         with self.name_scope():
@@ -206,8 +210,11 @@ class CEGenerator(HybridBlock):
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult, use_global_stats=istest))
-            self.model.add(LeakyReLU(alpha=0.2))
-	    #self.model.add(Activation(activation='sigmoid'))
+            if usetanh:
+                self.model.add(Activation(activation='tanh'))
+            else:
+                self.model.add(LeakyReLU(alpha=0.2))
+
             # Decoder
             self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=1,
                                            padding=padding, in_channels=ndf * nf_mult,
@@ -225,6 +232,7 @@ class CEGenerator(HybridBlock):
 
             self.model.add(Conv2DTranspose(channels=in_channels, kernel_size=kernel_size, strides=2,
                                            padding=padding, in_channels=ndf))
+
             self.model.add(LeakyReLU(alpha=0.2))
 
     def hybrid_forward(self, F, x):
