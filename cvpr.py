@@ -69,7 +69,8 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             real_out = batch.data[1].as_in_context(ctx)
 
             fake_out = netG(real_in)
-            fake_concat = image_pool.query(fake_out)
+            fake_concat = fake_out
+            #fake_concat = image_pool.query(fake_out)
             #fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
             with autograd.record():
                 # Train with fake image
@@ -99,6 +100,7 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
+                errR = L1_loss(real_out, fake_out)
                 errG.backward()
 
             trainerG.step(batch.data[0].shape[0])
