@@ -27,7 +27,7 @@ import argparse
 #logging.basicConfig()
 
 
-def set_network(depth, ctx, lr, beta1, ngf):
+def set_network(depth, ctx, ngf):
     # Pixel2pixel networks
     #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
@@ -39,12 +39,9 @@ def set_network(depth, ctx, lr, beta1, ngf):
     models.network_init(netEn, ctx=ctx)
     models.network_init(netD, ctx=ctx)
 
-    # trainer for the generator and the discriminator
-    trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
 
-    return netEn, netDe, netD, trainerEn, trainerDe, trainerD
+
+    return netEn, netDe, netD
 
 
 def facc(label, pred):
@@ -72,7 +69,7 @@ def main(opt):
                 testclasslabels.append(1)
 
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
-    netEn, netDe, netD, trainerEn, trainerDe, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
+    netEn, netDe, netD = set_network(opt.depth, ctx, opt.ngf)
     netEn.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_En.params', ctx=ctx)
     netDe.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_De.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
