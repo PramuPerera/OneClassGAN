@@ -30,7 +30,7 @@ import options
 def set_network(depth, ctx, lr, beta1, ngf):
     # Pixel2pixel networks
     #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf, usetanh = True)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=True)
 
@@ -71,8 +71,8 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
             ###########################
             real_in = batch.data[0].as_in_context(ctx)
             real_out = batch.data[1].as_in_context(ctx)
-
-            fake_out = netDe(netEn(real_in))
+            tempout = netEn(real_in)
+            fake_out = netDe(tempout)
             fake_concat = fake_out
             #fake_concat = image_pool.query(fake_out)
             #fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
@@ -84,14 +84,24 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 errD_fake = threewayloss(output, fake_label)
                 metric.update([fake_label, ], [output, ])
 
+                
+
                 # Train with real image
                 real_concat = real_out
                 output = netD(real_concat)
                 real_label = nd.ones(output.shape[0], ctx=ctx)
                 errD_real = threewayloss(output, real_label)
-                errD = (errD_real + errD_fake) * 0.5
-                errD.backward()
                 metric.update([real_label, ], [output, ])
+
+
+                #train with abnormal image
+                abinput = nd.random.uniform(-1,1,nd.shape(tempout),ctx=ctx)
+                aboutput = netDe(abinput)
+                ab_label = 2*nd.ones(output.shape[0], ctx=ctx)
+                errD_ab = threewayloss(aboutput, ab_label)
+                errD = (errD_real + errD_fake + errD_ab) * 0.33
+                errD.backward()
+                
 
             trainerD.step(batch.data[0].shape[0])
 
@@ -115,7 +125,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 logging.info(
-                    'discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
+                    'discriminator loss = %f, generator loss = %f, binary training acc = %f, reconstruction error= %f at iter %d epoch %d'
                     % (nd.mean(errD).asscalar(),
                        nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
             iter = iter + 1
