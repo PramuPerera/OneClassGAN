@@ -37,10 +37,10 @@ def facc(label, pred):
 
 def set_network(depth, ctx, ndf):
     #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf, usetanh=True)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=False)
-    netD2 = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=False)
+    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ndf, usetanh=True)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ndf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ndf, isthreeway=False)
+    netD2 = models.Discriminator(in_channels=3, n_layers =depth, ndf=ndf, isthreeway=False)
 
     return netEn, netDe, netD, netD2
 
