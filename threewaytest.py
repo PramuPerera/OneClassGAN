@@ -25,6 +25,12 @@ import options
 
 import argparse
 #logging.basicConfig()
+def sfmax(x):
+	mux = np.max(x, axis=-1, keepdims=True)
+	numerator = np.exp(x - mux)
+	denominator = np.sum(numerator, axis=-1, keepdims=True)
+	return numerator/denominator
+
 
 
 def set_network(depth, ctx, ngf):
@@ -86,15 +92,21 @@ def main(opt):
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
         out = netDe(netEn(real_out))
-        output4 = nd.mean((netD(out)), (1, 3, 2)).asnumpy()    
+        #print((netD(out).asnumpy())[:,2] )
+        print((((netD(out))).asnumpy()))
+	print(sfmax(((netD(out))).asnumpy()))
+	print(lbls)
+	output4 = sfmax(((netD(out))).asnumpy())[:,2]    
         out = netDe(netEn(real_in))
         #real_concat = nd.concat(out, out, dim=1)
         output = netD(out) #Denoised image
-        output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
-        output = nd.mean(output, (1, 3, 2)).asnumpy()
+        output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy()  #denoised-real
+        output = sfmax((output).asnumpy())[:,2]
         output2 = netD(real_out) #Image with no noise
-        output2 = nd.mean(output2, (1, 3, 2)).asnumpy()
+        output2 = sfmax((output2).asnumpy())[:,2]
         lbllist = lbllist+list(lbls.asnumpy())
+	#print(np.shape(output))
+	#print(np.shape(output3))
         scorelist1 = scorelist1+list(output)
         scorelist2 = scorelist2+list(output2)
         scorelist3 = scorelist3+list(output3)
@@ -107,6 +119,10 @@ def main(opt):
     roc_auc3 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
     roc_auc4 = auc(fpr, tpr)
+
+    print([[1,2,3],[2,2,2]])
+    print(sfmax([[1,2,3],[2,2,2]]))
+
     return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
 
 if __name__ == "__main__":
