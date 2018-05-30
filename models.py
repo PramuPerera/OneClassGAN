@@ -293,6 +293,7 @@ class Decoder(HybridBlock):
         super(Decoder, self).__init__()
 
         with self.name_scope():
+            nf_mult = 2 ** n_layers
             self.model = HybridSequential()
             kernel_size = 4
             padding = int(np.ceil((kernel_size - 1) / 2))
