@@ -1,6 +1,6 @@
 import options
 import twoDtest
-import np
+import numpy as np
 
 opt = options.test_options()
 opt.istest = 0
