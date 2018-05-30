@@ -162,4 +162,4 @@ def main(opt):
 if __name__ == "__main__":
     opt = options.train_options()     
     inclasses = main(opt)
-    print("Training finished for "+ inclasses)
+    #print("Training finished for "+ inclasses)

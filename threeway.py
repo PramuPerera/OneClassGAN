@@ -1,6 +1,8 @@
 #https://github.com/zackchase/mxnet-the-straight-dope/blob/master/chapter14_generative-adversarial-networks/pixel2pixel.ipynb
 from __future__ import print_function
 import os
+import os
+import os
 import matplotlib as mpl
 import tarfile
 import matplotlib.image as mpimg
@@ -43,11 +45,9 @@ def set_network(depth, ctx, lr, beta1, ngf):
     return netG, netD, trainerG, trainerD
 
 def facc(label, pred):
-    pred = pred.ravel()
-    label = label.ravel()
-    #print(np.shape(pred))
-    #print([np.argmax(pred),label])
-    return np.mean(np.argmax(pred)  == label)
+    #pred = pred.ravel()
+    #label = label.ravel()
+    return np.mean((np.argmax(pred,1)== label))
 
 def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname):
 
@@ -158,7 +158,7 @@ opt = options.train_options()
 if opt.seed != -1:
 	random.seed(opt.seed)
 ctx = mx.gpu() if opt.use_gpu else mx.cpu()
-inclasspaths = dload.loadPaths(opt.dataset, opt.datapath, opt.expname)
+inclasspaths, inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size)
 train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
 print('Data loading done.')
 netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)

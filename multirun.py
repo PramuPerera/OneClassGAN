@@ -31,7 +31,9 @@ for itt in range(50):
 	i = np.argmax(np.array(auc1))
 	opt.epochs = ran[i]
 	opt.istest=1
-        text_file.write("%s \n" % (str(ocgantestdisjoint.main(opt)[0])))
+        res = ocgantestdisjoint.main(opt)[0]
+        print(res)
+        text_file.write("%s \n" % (str(res)))
 text_file.close()
 
 
