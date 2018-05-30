@@ -47,9 +47,7 @@ def set_network(depth, ctx, lr, beta1, ngf):
     return netEn, netDe, netD, trainerEn, trainerDe, trainerD
 
 def facc(label, pred):
-    pred = pred.ravel()
-    label = label.ravel()
-    return ((pred > 0.5) == label).mean()
+    return np.mean((np.argmax(pred,1)== label))
 
 def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, trainerDe, trainerD, lambda1, batch_size, expname):
 
@@ -82,16 +80,14 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 # Train with fake image
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
-                fake_label = nd.zeros(output.shape, ctx=ctx)
-                fake_label(:,0)=1
+                fake_label = nd.zeros(output.shape[0], ctx=ctx)
                 errD_fake = threewayloss(output, fake_label)
                 metric.update([fake_label, ], [output, ])
 
                 # Train with real image
                 real_concat = real_out
                 output = netD(real_concat)
-                real_label = nd.zeros(output.shape, ctx=ctx)
-                fake_label(:,1)=1
+                real_label = nd.ones(output.shape[0], ctx=ctx)
                 errD_real = threewayloss(output, real_label)
                 errD = (errD_real + errD_fake) * 0.5
                 errD.backward()
@@ -106,8 +102,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 fake_out = netDe(netEn(real_in))
                 fake_concat = fake_out
                 output = netD(fake_concat)
-                real_label = nd.zeros(output.shape, ctx=ctx)
-                real_label(:,1)=1
+                real_label = nd.ones(output.shape[0], ctx=ctx)
                 errG = threewayloss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
@@ -161,7 +156,7 @@ opt = options.train_options()
 if opt.seed != -1:
 	random.seed(opt.seed)
 ctx = mx.gpu() if opt.use_gpu else mx.cpu()
-inclasspaths = dload.loadPaths(opt.dataset, opt.datapath, opt.expname)
+inclasspaths, _ = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size)
 train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
 print('Data loading done.')
 netEn, netDe, netD, trainerEn, trainerDe, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)

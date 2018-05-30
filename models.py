@@ -335,6 +335,8 @@ def param_init(param, ctx):
         # Initialize gamma from normal distribution with mean 1 and std 0.02
         if param.name.find('gamma') != -1:
             param.set_data(nd.random_normal(1, 0.02, param.data().shape))
+    elif param.name.find('dense') != -1:
+	    param.initialize(init=mx.init.Normal(0.02), ctx=ctx)
 
 
 def network_init(net, ctx):
