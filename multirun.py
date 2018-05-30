@@ -1,5 +1,6 @@
 import options
 import ocgantestdisjoint
+import cvpr
 import numpy as np
 import random
 import os
@@ -7,10 +8,10 @@ opt = options.test_options()
 
 opt.istest = 0
 #First use the validation set to pick best model:wq
-
 text_file = open(opt.dataset + "_progress.txt", "w")
 for itt in range(50):
-	os.system('python2  cvpr.py --epoch 501  --expname grapesip64 --img_wd 64  --img_ht 64  --depth 3  --datapath ../ --noisevar 0.2  --seed 1000 --lambda1 10 ')
+        
+	os.system('python2  cvpr.py --epoch 501  --expname grapesip64 --img_wd 64  --img_ht 64  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 10 ')
 
 	auc1 = []
 	auc2=[]
@@ -27,7 +28,7 @@ for itt in range(50):
 	    auc4.append(roc_auc[3])
 
 	#Pick best model w.r.t criterion 1
-	i = np.argmin(np.array(auc1))
+	i = np.argmax(np.array(auc1))
 	opt.epochs = ran[i]
 	opt.istest=1
         text_file.write("%s \n" % (str(ocgantestdisjoint.main(opt)[0])))

@@ -145,17 +145,21 @@ def print_result():
         visual.visualize(img_out[0])
     plt.show()
 
+def main(opt):   
+    if opt.seed != -1:
+            random.seed(opt.seed)
+    ctx = mx.gpu() if opt.use_gpu else mx.cpu()
+    inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1)
+    train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
+    print('Data loading done.')
+    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
+    if opt.graphvis:
+        print(netG)
+    print('training')
+    train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname)
+    return inclasses
 
-opt = options.train_options()        
-if opt.seed != -1:
-	random.seed(opt.seed)
-ctx = mx.gpu() if opt.use_gpu else mx.cpu()
-inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1)
-train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
-print('Data loading done.')
-netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
-if opt.graphvis:
-    print(netG)
-print('training')
-train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname)
-
+if __name__ == "__main__":
+    opt = options.train_options()     
+    inclasses = main(opt)
+    print("Training finished for "+ inclasses)

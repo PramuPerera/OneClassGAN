@@ -22,6 +22,7 @@ def train_options():
     parser.add_argument("--noisevar", default=0.02, type=float, help="variance of noise added to input")
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
     parser.add_argument("--seed", default=-1, type=float, help="Seed generator. Use -1 for random.")
+    
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
@@ -51,6 +52,7 @@ def test_options():
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
     parser.add_argument("--noisevar", default=0.02, type=float, help="variance of noise added to input")
     parser.add_argument("--istest", default=1, type=float, help="if test set 1, otherwise validation")
+    parser.add_argument("--trainstring", default='', type=float, help="arguments used for training (Optional)")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
