@@ -32,7 +32,7 @@ def set_network(depth, ctx, lr, beta1, ngf):
     #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, threeway=True)
+    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=True)
 
     # Initialize parameters
     models.network_init(netDe, ctx=ctx)    

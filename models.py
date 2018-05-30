@@ -79,7 +79,7 @@ class UnetGenerator(HybridBlock):
 
 # Define the PatchGAN discriminator
 class Discriminator(HybridBlock):
-    def __init__(self, in_channels, ndf=64, n_layers=3, use_sigmoid=False, use_bias=False, istest = False, threeway = False):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_sigmoid=False, use_bias=False, istest = False, isthreeway = False):
         super(Discriminator, self).__init__()
 
         with self.name_scope():
