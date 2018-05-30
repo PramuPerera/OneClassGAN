@@ -45,7 +45,7 @@ print("AUC for criterion 2 (test): " + twoDtest.main(opt))
 
 #Pick best model w.r.t criterion 3
 i = np.argmax(np.array(auc3))
-opt.epochs = ran[3i]
+opt.epochs = ran[i]
 opt.istest=0
 print("AUC for criterion 3 (val): " + twoDtest.main(opt))
 opt.istest=1
