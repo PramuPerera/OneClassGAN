@@ -49,7 +49,9 @@ def set_network(depth, ctx, lr, beta1, ngf):
     return netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2
 
 def facc(label, pred):
-    return np.mean((np.argmax(pred,1)== label))
+    pred = pred.ravel()
+    label = label.ravel()
+    return ((pred > 0.5) == label).mean()
 
 def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname):
 
