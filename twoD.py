@@ -30,7 +30,7 @@ import options
 def set_network(depth, ctx, lr, beta1, ngf):
     # Pixel2pixel networks
     #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf, usetanh=True)  # UnetGenerator(in_channels=3, num_downs=8) #
     netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=False)
     netD2 = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=False)
