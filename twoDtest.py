@@ -79,9 +79,9 @@ def main(opt):
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
-        out = (netG(real_out))
+        out = netDe(netEn(real_out))
         output4 = nd.mean((netD2(out)), (1, 3, 2)).asnumpy()    
-        out = (netG(real_in))
+        out = netDe(netEn(real_in))
         #real_concat = nd.concat(out, out, dim=1)
         output = netD2(out) #Denoised image
         output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
