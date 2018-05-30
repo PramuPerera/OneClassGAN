@@ -13,7 +13,7 @@ auc4=[]
 ran = range(0,400,10)
 for i in ran:
     opt.epochs = i
-    roc_auc = ocgantestdisjoint.main(opt)
+    roc_auc = twoDtest.main(opt)
     print(roc_auc)
     auc1+=roc_auc[0]
     auc2+=roc_auc[1]
