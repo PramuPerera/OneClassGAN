@@ -32,24 +32,26 @@ def set_network(depth, ctx, lr, beta1, ngf):
     #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=True)
+    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=False)
+    netD2 = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=False)
 
     # Initialize parameters
     models.network_init(netDe, ctx=ctx)    
     models.network_init(netEn, ctx=ctx)
     models.network_init(netD, ctx=ctx)
+    models.network_init(netD2, ctx=ctx)
 
     # trainer for the generator and the discriminator
     trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-
-    return netEn, netDe, netD, trainerEn, trainerDe, trainerD
+    trainerD2 = gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    return netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2
 
 def facc(label, pred):
     return np.mean((np.argmax(pred,1)== label))
 
-def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, trainerDe, trainerD, lambda1, batch_size, expname):
+def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname):
 
     threewayloss =gluon.loss.SoftmaxCrossEntropyLoss()
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
@@ -81,31 +83,35 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
                 fake_label = nd.zeros(output.shape[0], ctx=ctx)
-                errD_fake = threewayloss(output, fake_label)
+                errD_fake = GAN_loss(output, fake_label)
                 metric.update([fake_label, ], [output, ])
 
+                output2 = netD2(fake_concat)
+                errD2_fake = GAN_loss(output2, fake_label)
                 
 
                 # Train with real image
                 real_concat = real_out
                 output = netD(real_concat)
                 real_label = nd.ones(output.shape[0], ctx=ctx)
-                errD_real = threewayloss(output, real_label)
+                errD_real = GAN_loss(output, real_label)
                 metric.update([real_label, ], [output, ])
 
 
                 #train with abnormal image
                 abinput = nd.random.uniform(-1,1,tempout.shape,ctx=ctx)
-                aboutput =netD( netDe(abinput))
+                aboutput =netD2( netDe(abinput))
 		#print(aboutput.shape)
 		#print(output.shape)
-                ab_label = 2*nd.ones(aboutput.shape[0], ctx=ctx)
-                errD_ab = threewayloss(aboutput, ab_label)
-                errD = (errD_real + errD_fake + errD_ab) * 0.33
+                ab_label = nd.ones(aboutput.shape[0], ctx=ctx)
+                errD2_ab = GAN_loss(aboutput, ab_label)
+                errD2 = ( errD2_fake + errD2_ab) * 0.5
+                errD = errD2+0.5*(errD_real+errD_fake)
                 errD.backward()
                 
 
             trainerD.step(batch.data[0].shape[0])
+            trainerD2.step(batch.data[0].shape[0])
 
             ############################
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
@@ -115,7 +121,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 fake_concat = fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape[0], ctx=ctx)
-                errG = threewayloss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
 
@@ -129,7 +135,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
                 logging.info(
                     'discriminator loss = %f, generator loss = %f, latent error = %f,  binary training acc = %f, reconstruction error= %f at iter %d epoch %d'
                     % (nd.mean(errD).asscalar(),
-                       nd.mean(errG).asscalar(), nd.mean(errD_ab).asscalar()   , acc,nd.mean(errR).asscalar() ,iter, epoch))
+                       nd.mean(errG).asscalar(), nd.mean(errD2).asscalar()   , acc,nd.mean(errR).asscalar() ,iter, epoch))
             iter = iter + 1
             btic = time.time()
 
@@ -140,6 +146,8 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, tra
         if epoch%10 ==0:
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_D2.params"
+            netD2.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_En.params"
             netEn.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_De.params"
@@ -171,9 +179,9 @@ ctx = mx.gpu() if opt.use_gpu else mx.cpu()
 inclasspaths, _ = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size)
 train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
 print('Data loading done.')
-netEn, netDe, netD, trainerEn, trainerDe, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
+netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2 = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
 if opt.graphvis:
     print(netEn)
 print('training')
-train(opt.pool_size, opt.epochs, train_data, ctx, netEn, netDe, netD, trainerEn, trainerDe, trainerD, opt.lambda1, opt.batch_size, opt.expname)
+train(opt.pool_size, opt.epochs, train_data, ctx, netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, opt.lambda1, opt.batch_size, opt.expname)
 
