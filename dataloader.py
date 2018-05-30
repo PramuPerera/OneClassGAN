@@ -1,6 +1,6 @@
 import os
 import numpy as np
-def loadPaths(dataset, datapath, expname):
+def loadPaths(dataset, datapath, expname, minquery = 16):
     # read names of classes; treat last class as clutter
     text_file = open(dataset + "_folderlist.txt", "r")
     folders = text_file.readlines()
@@ -14,12 +14,14 @@ def loadPaths(dataset, datapath, expname):
     # randomly pick 3 classes making sure each has more than 150 images
     for i in range(len(folders) - 1):
         dirs = os.listdir(datapath + dataset + '/' + folders[i])
-        if len(dirs) > 150:
+        if len(dirs) > 150+minquery:
             valid_folders.append(folders[i])
-    inclasses = np.random.permutation(np.arange(len(valid_folders)))[0:3]
+    inclasses = np.random.permutation(np.arange(len(valid_folders)))[0]#[0:3]
+    inclasses = [inclasses]
     inclasses = [valid_folders[i] for i in inclasses]
     #inclasses = ['092.grapes', '109.hot-tub', '148.mussels']
-    inclasses = ['092.grapes']
+    #inclasses = ['092.grapes']
+    #inclasses = [inclasses]
     print(inclasses)
 
     # first 150 of each image is treated as training. remainder is treated as testing
@@ -56,4 +58,4 @@ def loadPaths(dataset, datapath, expname):
     for fn, lbl in zip(validationclasspaths, validationclasslabels):
         text_file.write("%s %s\n" % (fn, str(lbl)))
     text_file.close()    
-    return inclasspaths
+    return [inclasspaths, inclasses]

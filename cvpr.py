@@ -150,7 +150,7 @@ opt = options.train_options()
 if opt.seed != -1:
 	random.seed(opt.seed)
 ctx = mx.gpu() if opt.use_gpu else mx.cpu()
-inclasspaths = dload.loadPaths(opt.dataset, opt.datapath, opt.expname)
+inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1)
 train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
 print('Data loading done.')
 netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
