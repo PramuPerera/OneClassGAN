@@ -19,7 +19,7 @@ for i in ran:
     auc2+=roc_auc[1]
     auc3+=roc_auc[2]
     auc4+=roc_auc[3]
-    text_file.write("%s %s %s %s %s\n" % (str(roc_auc[0]), str(roc_auc[1]),str(roc_auc[2]),str(roc_auc[3])))
+    text_file.write("%s %s %s %s %s\n" % (str(i), str(roc_auc[0]), str(roc_auc[1]),str(roc_auc[2]),str(roc_auc[3])))
 text_file.close()
 print('Validation Done')
 
