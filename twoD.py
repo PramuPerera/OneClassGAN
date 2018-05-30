@@ -82,7 +82,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, netD2, trainer
                 # Train with fake image
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
-                fake_label = nd.zeros(output.shape[0], ctx=ctx)
+                fake_label = nd.zeros(output.shape, ctx=ctx)
                 errD_fake = GAN_loss(output, fake_label)
                 metric.update([fake_label, ], [output, ])
 
@@ -93,7 +93,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, netD2, trainer
                 # Train with real image
                 real_concat = real_out
                 output = netD(real_concat)
-                real_label = nd.ones(output.shape[0], ctx=ctx)
+                real_label = nd.ones(output.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
                 metric.update([real_label, ], [output, ])
 
@@ -103,7 +103,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, netD2, trainer
                 aboutput =netD2( netDe(abinput))
 		#print(aboutput.shape)
 		#print(output.shape)
-                ab_label = nd.ones(aboutput.shape[0], ctx=ctx)
+                ab_label = nd.ones(aboutput.shape, ctx=ctx)
                 errD2_ab = GAN_loss(aboutput, ab_label)
                 errD2 = ( errD2_fake + errD2_ab) * 0.5
                 errD = errD2+0.5*(errD_real+errD_fake)
@@ -120,7 +120,7 @@ def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, netD2, trainer
                 fake_out = netDe(netEn(real_in))
                 fake_concat = fake_out
                 output = netD(fake_concat)
-                real_label = nd.ones(output.shape[0], ctx=ctx)
+                real_label = nd.ones(output.shape, ctx=ctx)
                 errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
