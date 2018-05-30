@@ -1,8 +1,6 @@
 #https://github.com/zackchase/mxnet-the-straight-dope/blob/master/chapter14_generative-adversarial-networks/pixel2pixel.ipynb
 from __future__ import print_function
 import os
-import os
-import os
 import matplotlib as mpl
 import tarfile
 import matplotlib.image as mpimg
@@ -31,25 +29,29 @@ import options
 
 def set_network(depth, ctx, lr, beta1, ngf):
     # Pixel2pixel networks
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, isthreeway=True)
+    #netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netEn = models.Encoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netDe = models.Decoder(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD = models.Discriminator(in_channels=3, n_layers =depth, ndf=ngf, threeway=True)
 
     # Initialize parameters
-    models.network_init(netG, ctx=ctx)
+    models.network_init(netDe, ctx=ctx)    
+    models.network_init(netEn, ctx=ctx)
     models.network_init(netD, ctx=ctx)
 
     # trainer for the generator and the discriminator
-    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
 
-    return netG, netD, trainerG, trainerD
+    return netEn, netDe, netD, trainerEn, trainerDe, trainerD
 
 def facc(label, pred):
-    #pred = pred.ravel()
-    #label = label.ravel()
-    return np.mean((np.argmax(pred,1)== label))
+    pred = pred.ravel()
+    label = label.ravel()
+    return ((pred > 0.5) == label).mean()
 
-def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname):
+def train(pool_size, epochs, train_data, ctx, netEn, netDe, netD, trainerEn, trainerDe, trainerD, lambda1, batch_size, expname):
 
     threewayloss =gluon.loss.SoftmaxCrossEntropyLoss()
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
@@ -72,7 +74,7 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             real_in = batch.data[0].as_in_context(ctx)
             real_out = batch.data[1].as_in_context(ctx)
 
-            fake_out = netG(real_in)
+            fake_out = netDe(netEn(real_in))
             fake_concat = fake_out
             #fake_concat = image_pool.query(fake_out)
             #fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
@@ -80,18 +82,16 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 # Train with fake image
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
-                fake_label = nd.zeros(output.shape[0], ctx=ctx)
-               
-		#print(np.shape(output))
-		#print((fake_label))
+                fake_label = nd.zeros(output.shape, ctx=ctx)
+                fake_label(:,0)=1
                 errD_fake = threewayloss(output, fake_label)
                 metric.update([fake_label, ], [output, ])
 
                 # Train with real image
                 real_concat = real_out
                 output = netD(real_concat)
-                real_label = nd.ones(output.shape[0], ctx=ctx)
-                
+                real_label = nd.zeros(output.shape, ctx=ctx)
+                fake_label(:,1)=1
                 errD_real = threewayloss(output, real_label)
                 errD = (errD_real + errD_fake) * 0.5
                 errD.backward()
@@ -103,16 +103,17 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
             with autograd.record():
-                fake_out = netG(real_in)
+                fake_out = netDe(netEn(real_in))
                 fake_concat = fake_out
                 output = netD(fake_concat)
-                real_label = nd.ones(output.shape[0], ctx=ctx)
-                
+                real_label = nd.zeros(output.shape, ctx=ctx)
+                real_label(:,1)=1
                 errG = threewayloss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
 
-            trainerG.step(batch.data[0].shape[0])
+            trainerEn.step(batch.data[0].shape[0])
+            trainerDe.step(batch.data[0].shape[0])
 
             # Print log infomation every ten batches
             if iter % 10 == 0:
@@ -132,8 +133,10 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
         if epoch%10 ==0:
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
-            filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
-            netG.save_params(filename)
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_En.params"
+            netEn.save_params(filename)
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_De.params"
+            netDe.save_params(filename)
             # Visualize one generated image for each epoch
             fake_img = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             visual.visualize(fake_img)
@@ -158,12 +161,12 @@ opt = options.train_options()
 if opt.seed != -1:
 	random.seed(opt.seed)
 ctx = mx.gpu() if opt.use_gpu else mx.cpu()
-inclasspaths, inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size)
+inclasspaths = dload.loadPaths(opt.dataset, opt.datapath, opt.expname)
 train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
 print('Data loading done.')
-netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
+netEn, netDe, netD, trainerEn, trainerDe, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
 if opt.graphvis:
-    print(netG)
+    print(netEn)
 print('training')
-train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname)
+train(opt.pool_size, opt.epochs, train_data, ctx, netEn, netDe, netD, trainerEn, trainerDe, trainerD, opt.lambda1, opt.batch_size, opt.expname)
 
