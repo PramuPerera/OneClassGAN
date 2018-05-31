@@ -27,9 +27,12 @@ import argparse
 import options
 #logging.basicConfig()
 
-def set_network(depth, ctx, lr, beta1, ngf):
+def set_network(depth, ctx, lr, beta1, ngf, append=True):
     # Pixel2pixel networks
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    if append:
+        netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    else:
+        netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
 
     # Initialize parameters
@@ -47,13 +50,15 @@ def facc(label, pred):
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
-def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname):
+def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True):
         
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
     L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
-
+    loss_rec_G = []
+    loss_rec_D = []
+    loss_rec_R = []
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
 
@@ -70,30 +75,19 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             real_out = batch.data[1].as_in_context(ctx)
 
             fake_out = netG(real_in)
-	    #print((fake_out))
-	    #print(np.shape(real_in))
-            fake_concat = nd.concat(real_in, fake_out, dim=1)
-            #fake_concat = image_pool.query(fake_out)
-            #fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
+            fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
             with autograd.record():
                 # Train with fake image
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
-		#print(np.shape(output))
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 errD_fake = GAN_loss(output, fake_label)
-		#print((output.shape))
-		#print(np.shape(fake_label))
-		#print('mett')
                 metric.update([fake_label, ], [output, ])
-		#print('metted')
-                # Train with real image
-                real_concat = nd.concat(real_in, real_out, dim=1)
+                real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
-                #print(output)
- 		errD = (errD_real + errD_fake) * 0.5
+                errD = (errD_real + errD_fake) * 0.5
                 errD.backward()
                 metric.update([real_label, ], [output, ])
 
@@ -104,7 +98,7 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             ###########################
             with autograd.record():
                 fake_out = netG(real_in)
-                fake_concat = nd.concat(real_in, fake_out, dim=1)
+                fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
@@ -112,7 +106,10 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 errG.backward()
 
             trainerG.step(batch.data[0].shape[0])
-
+            loss_rec_G.append(errG-errR*lambda1)
+            loss_rec_D.append(errD)
+            loss_rec_R.append(errR)
+            
             # Print log infomation every ten batches
             if iter % 10 == 0:
                 name, acc = metric.get()
@@ -135,10 +132,14 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
             netG.save_params(filename)
             # Visualize one generated image for each epoch
-            fake_img = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
+            fake_img1 = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
+            fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
+            fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
+            fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
+            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=0)
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
-        #
+        return([loss_rec_D,loss_rec_G, loss_rec_R])
 
 
 def print_result():
@@ -160,11 +161,15 @@ def main(opt):
     inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1)
     train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
     print('Data loading done.')
-    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf)
+    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngfm opt.append)
     if opt.graphvis:
         print(netG)
     print('training')
-    train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname)
+    loss_vec = train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname, opt.append)
+    plt.plot(loss_vec[0], label="D")
+    plt.plot(loss_vec[1], label="G")
+    plt.plot(loss_vec[2], label="R")
+    plt.savefig('outputs/'+expname+'_loss.png')
     return inclasses
 
 if __name__ == "__main__":
