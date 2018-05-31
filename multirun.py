@@ -9,9 +9,13 @@ opt = options.test_options()
 opt.istest = 0
 #First use the validation set to pick best model:wq
 text_file = open(opt.dataset + "_progress.txt", "w")
+text_file.close()
+text_file1 = open(opt.dataset + "_progress1.txt", "w")
+text_file1.close()
 for itt in range(50):
-        
-	os.system('python2  cvpr.py --epoch 501  --expname grapesip64 --img_wd 64  --img_ht 64  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 10 ')
+        text_file1 = open(opt.dataset + "_progress1.txt", "a")        
+	text_file = open(opt.dataset + "_progress.txt", "a")
+	os.system('python2  cvprappend.py --epoch 501  --expname grapesip64 --img_wd 64  --img_ht 64  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 0.4 ')
 
 	auc1 = []
 	auc2=[]
@@ -28,17 +32,25 @@ for itt in range(50):
 	    auc4.append(roc_auc[3])
 
 	#Pick best model w.r.t criterion 1
-	i = np.argmax(np.array(auc1))
+	i = np.argmin(np.array(auc1))
+        imax = np.argmax(np.array(auc1))
 	opt.epochs = ran[i]
 	opt.istest=1
         res = ocgantestdisjoint.main(opt)[0]
         print(res)
+        opt.epochs = ran[imax]
+        opt.istest=1
+        res1 = ocgantestdisjoint.main(opt)[0]
+
         text_file.write("%s \n" % (str(res)))
-text_file.close()
+	text_file.close()
 
-
+        text_file1.write("%s \n" % (str(res1)))
+        text_file1.close()
 '''
 	print("AUC for criterion 1 (test): " + str(ocgantestdisjoint.main(opt)[0]))
+
+
 
 
 

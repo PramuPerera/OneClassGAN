@@ -30,7 +30,7 @@ import options
 def set_network(depth, ctx, lr, beta1, ngf):
     # Pixel2pixel networks
     netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=6, n_layers =depth, ndf=ngf)
+    netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -50,7 +50,7 @@ def facc(label, pred):
 def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname):
         
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
-    L1_loss = gluon.loss.L1Loss()
+    L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
 
@@ -70,6 +70,8 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             real_out = batch.data[1].as_in_context(ctx)
 
             fake_out = netG(real_in)
+	    #print((fake_out))
+	    #print(np.shape(real_in))
             fake_concat = nd.concat(real_in, fake_out, dim=1)
             #fake_concat = image_pool.query(fake_out)
             #fake_concat = image_pool.query(nd.concat(real_in, fake_out, dim=1))
@@ -77,16 +79,21 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 # Train with fake image
                 # Use image pooling to utilize history images
                 output = netD(fake_concat)
+		#print(np.shape(output))
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 errD_fake = GAN_loss(output, fake_label)
+		#print((output.shape))
+		#print(np.shape(fake_label))
+		#print('mett')
                 metric.update([fake_label, ], [output, ])
-
+		#print('metted')
                 # Train with real image
                 real_concat = nd.concat(real_in, real_out, dim=1)
                 output = netD(real_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
-                errD = (errD_real + errD_fake) * 0.5
+                #print(output)
+ 		errD = (errD_real + errD_fake) * 0.5
                 errD.backward()
                 metric.update([real_label, ], [output, ])
 
@@ -110,7 +117,8 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             if iter % 10 == 0:
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
-                logging.info(
+                #print(errD)
+		logging.info(
                     'discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
                     % (nd.mean(errD).asscalar(),
                        nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))

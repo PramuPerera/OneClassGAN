@@ -82,10 +82,14 @@ def main(opt):
         out = netDe(netEn(real_out))
         output4 = nd.mean((netD2(out)), (1, 3, 2)).asnumpy()    
         out = netDe(netEn(real_in))
-        #real_concat = nd.concat(out, out, dim=1)
+        
+	#real_concat = nd.concat(out, out, dim=1)
         output = netD2(out) #Denoised image
+	
         output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
         output = nd.mean(output, (1, 3, 2)).asnumpy()
+	print(output)
+	print(lbls)
         output2 = netD2(real_out) #Image with no noise
         output2 = nd.mean(output2, (1, 3, 2)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())

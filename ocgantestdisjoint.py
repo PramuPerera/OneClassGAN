@@ -21,7 +21,7 @@ from datetime import datetime
 import time
 import logging
 import options
-
+import visual
 
 import argparse
 #logging.basicConfig()
@@ -37,8 +37,8 @@ def facc(label, pred):
 
 def set_network(depth, ctx, lr, beta1, ndf):
     netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ndf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=3, n_layers=depth, istest=True, ndf=ndf)
-
+    #netD = models.Discriminator(in_channels=6, n_layers=depth, istest=True, ndf=ndf)
+    netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ndf/4, istest=True)
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
     models.network_init(netD, ctx=ctx)
@@ -82,19 +82,25 @@ def main(opt):
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
         out = (netG(real_out))
-        output4 = nd.mean((netD(out)), (1, 3, 2)).asnumpy()    
+        out_concat = nd.concat(real_in, out, dim=1)
+        output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
         out = (netG(real_in))
         #real_concat = nd.concat(out, out, dim=1)
-        output = netD(out) #Denoised image
+	out_concat = nd.concat(real_in, out, dim=1)
+        output = netD(out_concat) #Denoised image
         output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
+	out_concat = nd.concat(real_in, real_out, dim=1)
         output = nd.mean(output, (1, 3, 2)).asnumpy()
-        output2 = netD(real_out) #Image with no noise
+        output2 = netD(out_concat) #Image with no noise
         output2 = nd.mean(output2, (1, 3, 2)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())
         scorelist1 = scorelist1+list(output)
         scorelist2 = scorelist2+list(output2)
         scorelist3 = scorelist3+list(output3)
         scorelist4 = scorelist4+list(output4)
+    	fake_img = nd.concat(real_in[0],real_out[0], out[0], dim=1)
+    	visual.visualize(fake_img)
+    	plt.savefig('outputs/T_'+str(count)+'.png')
     fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
     roc_auc1 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)

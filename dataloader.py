@@ -36,7 +36,7 @@ def loadPaths(dataset, datapath, expname, minquery = 16):
     validationclasspaths = list(testclasspaths)
     validationclasslabels = list(testclasslabels)
     # pick 50% of images from clutter class
-    cluttersize = int(round(len(testclasslabels) * 0.5))
+    cluttersize = int(round(len(testclasslabels)))
     dirs = os.listdir(datapath + dataset + '/' + folders[-1])
     for nfile in range(min(cluttersize, len(dirs))):
         testclasspaths.append(datapath + dataset + '/' + folders[-1] + '/' + dirs[nfile])

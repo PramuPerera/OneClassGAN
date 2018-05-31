@@ -85,7 +85,7 @@ class Discriminator(HybridBlock):
         with self.name_scope():
             self.model = HybridSequential()
             kernel_size = 5
-            padding = 1 #int(np.ceil((kernel_size - 1) / 2))
+            padding = 0 #int(np.ceil((kernel_size - 1) / 2))
             self.model.add(Conv2D(channels=ndf, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=in_channels))
             self.model.add(LeakyReLU(alpha=0.2))
@@ -102,12 +102,12 @@ class Discriminator(HybridBlock):
 
             nf_mult_prev = nf_mult
             nf_mult = min(2 ** n_layers, 8)
-            self.model.add(Conv2D(channels=ndf * nf_mult, kernel_size=kernel_size, strides=1,
+            self.model.add(Conv2D(channels=ndf * nf_mult, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult, use_global_stats=istest))
             self.model.add(LeakyReLU(alpha=0.2))
-            self.model.add(Conv2D(channels=1, kernel_size=kernel_size, strides=1,
+            self.model.add(Conv2D(channels=1, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult))
             if isthreeway:
                 self.model.add(gluon.nn.Dense(3))
@@ -186,8 +186,8 @@ class CEGenerator(HybridBlock):
 
         with self.name_scope():
             self.model = HybridSequential()
-            kernel_size = 4
-            padding = int(np.ceil((kernel_size - 1) / 2))
+            kernel_size = 5
+            padding = 0 #int(np.ceil((kernel_size - 1) / 2))
             self.model.add(Conv2D(channels=ndf, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=in_channels))
             self.model.add(LeakyReLU(alpha=0.2))
@@ -206,18 +206,18 @@ class CEGenerator(HybridBlock):
 
             nf_mult_prev = nf_mult
             nf_mult = 2 ** n_layers
-            self.model.add(Conv2D(channels=ndf * nf_mult, kernel_size=kernel_size, strides=1,
+            self.model.add(Conv2D(channels=128, kernel_size=kernel_size, strides=1,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
-            self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult, use_global_stats=istest))
+            self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
             if usetanh:
                 self.model.add(Activation(activation='tanh'))
             else:
                 self.model.add(LeakyReLU(alpha=0.2))
 
             # Decoder
-            self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=1,
-                                           padding=padding, in_channels=ndf * nf_mult,
+            self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=1,
+                                           padding=padding, in_channels=128,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
             self.model.add(LeakyReLU(alpha=0.2))
