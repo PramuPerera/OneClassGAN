@@ -45,8 +45,8 @@ def set_network(depth, ctx, lr, beta1, ngf, append=True, solver='adam'):
 	    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     elif solver == 'sgd':
 	    print('sgd')
- 	    trainerG = gluon.Trainer(netG.collect_params(), 'sgd', {'learning_rate': lr})
-	    trainerD = gluon.Trainer(netD.collect_params(), 'sgd', {'learning_rate': lr})
+ 	    trainerG = gluon.Trainer(netG.collect_params(), 'sgd', {'learning_rate': lr, 'momentum': 0.9} )
+	    trainerD = gluon.Trainer(netD.collect_params(), 'sgd', {'learning_rate': lr, 'momentum': 0.9})
     return netG, netD, trainerG, trainerD
 
 def facc(label, pred):
@@ -73,7 +73,7 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
         btic = time.time()
         train_data.reset()
         iter = 0
-	if epoch>250:
+	if epoch>500:
  		trainerD.set_learning_rate(dlr * (1-int(epoch-250)/1000))
         	trainerG.set_learning_rate(glr * (1-int(epoch-250)/1000))
         #print('learning rate : '+str(trainerD.learning_rate ))
@@ -180,10 +180,10 @@ def main(opt):
     print(opt.epochs)
     loss_vec = train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname,  opt.append)
     plt.gcf().clear()
-    plt.plot(loss_vec[0], label="D")
-    plt.plot(loss_vec[1], label="G")
-    plt.plot(loss_vec[2], label="R")
-    plt.plot(loss_vec[3], label="Acc")
+    plt.plot(loss_vec[0], label="D", alpha = 0.7)
+    plt.plot(loss_vec[1], label="G", alpha=0.7)
+    plt.plot(loss_vec[2], label="R", alpha= 0.7)
+    plt.plot(loss_vec[3], label="Acc", alpha = 0.7)
     plt.legend()
     plt.savefig('outputs/'+opt.expname+'_loss.png')
     return inclasses

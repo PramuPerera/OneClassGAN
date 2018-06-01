@@ -24,6 +24,7 @@ for itt in range(50):
 	ran = range(0,1000,10)
 	for i in ran:
 	    opt.epochs = i
+	    istest = 0
 	    roc_auc = ocgantestdisjoint.main(opt)
 	    print(roc_auc)
 	    auc1.append(roc_auc[0])

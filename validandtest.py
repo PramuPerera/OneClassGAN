@@ -11,7 +11,7 @@ auc1 = []
 auc2=[]
 auc3=[]
 auc4=[]
-ran = range(0,1000,10)
+ran = range(0,500,10)
 for i in ran:
     opt.epochs = i
     roc_auc = ocgantestdisjoint.main(opt)

@@ -47,8 +47,8 @@ def loadPaths(dataset, datapath, expname, minquery = 16):
         text_file.write("%s %s\n" % (fn, str(lbl)))
     text_file.close()
     #consider 'other' classes and get paths of their samples for validation
-    validation_set = list(set(valid_folders)^set(inclasses))
-    nofentriesperclass = int(np.size(inclasslabels)/np.size(validation_set))
+    validation_set = list(set(folders)^set(valid_folders))
+    nofentriesperclass = 1+int(np.size(inclasslabels)/np.size(validation_set))
     for nclass in validation_set:
          dirs = os.listdir(datapath + dataset + '/' + nclass)
          for nfile in range(nofentriesperclass):
