@@ -27,22 +27,26 @@ import argparse
 import options
 #logging.basicConfig()
 
-def set_network(depth, ctx, lr, beta1, ngf, append=True):
+def set_network(depth, ctx, lr, beta1, ngf, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
-        netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+        netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     else:
-        netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
+	netD = models.Discriminator(in_channels=3, n_layers =depth-1, ndf=ngf/4)
+    netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
     models.network_init(netD, ctx=ctx)
-
-    # trainer for the generator and the discriminator
-    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-
+    if solver=='adam':
+	    # trainer for the generator and the discriminator
+	    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+	    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    elif solver == 'sgd':
+	    print('sgd')
+ 	    trainerG = gluon.Trainer(netG.collect_params(), 'sgd', {'learning_rate': lr})
+	    trainerD = gluon.Trainer(netD.collect_params(), 'sgd', {'learning_rate': lr})
     return netG, netD, trainerG, trainerD
 
 def facc(label, pred):
@@ -51,7 +55,8 @@ def facc(label, pred):
     return ((pred > 0.5) == label).mean()
 
 def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True):
-        
+    dlr = trainerD.learning_rate 
+    glr = trainerG.learning_rate     
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
     L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
@@ -59,15 +64,20 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
     loss_rec_G = []
     loss_rec_D = []
     loss_rec_R = []
+    acc_rec = []
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
-
+    print(epochs)
     for epoch in range(epochs):
         tic = time.time()
         btic = time.time()
         train_data.reset()
         iter = 0
-        for batch in train_data:
+	if epoch>250:
+ 		trainerD.set_learning_rate(dlr * (1-int(epoch-250)/1000))
+        	trainerG.set_learning_rate(glr * (1-int(epoch-250)/1000))
+        #print('learning rate : '+str(trainerD.learning_rate ))
+	for batch in train_data:
             ############################
             # (1) Update D network: maximize log(D(x, y)) + log(1 - D(x, G(x, z)))
             ###########################
@@ -104,12 +114,13 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
                 errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
-
+	   
             trainerG.step(batch.data[0].shape[0])
-            loss_rec_G.append(errG-errR*lambda1)
-            loss_rec_D.append(errD)
-            loss_rec_R.append(errR)
-            
+            loss_rec_G.append(nd.mean(errG).asscalar()-nd.mean(errR).asscalar()*lambda1)
+            loss_rec_D.append(nd.mean(errD).asscalar())
+            loss_rec_R.append(nd.mean(errR).asscalar())
+            name, acc = metric.get()
+	    acc_rec.append(acc)
             # Print log infomation every ten batches
             if iter % 10 == 0:
                 name, acc = metric.get()
@@ -136,10 +147,11 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
             fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
-            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=0)
+            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=2)
+            #print(np.shape(fake_img))
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
-        return([loss_rec_D,loss_rec_G, loss_rec_R])
+    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec])
 
 
 def print_result():
@@ -161,18 +173,25 @@ def main(opt):
     inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1)
     train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
     print('Data loading done.')
-    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngfm opt.append)
+    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf, opt.append)
     if opt.graphvis:
         print(netG)
     print('training')
-    loss_vec = train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname, opt.append)
+    print(opt.epochs)
+    loss_vec = train(opt.pool_size, opt.epochs, train_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname,  opt.append)
+    plt.gcf().clear()
     plt.plot(loss_vec[0], label="D")
     plt.plot(loss_vec[1], label="G")
     plt.plot(loss_vec[2], label="R")
-    plt.savefig('outputs/'+expname+'_loss.png')
+    plt.plot(loss_vec[3], label="Acc")
+    plt.legend()
+    plt.savefig('outputs/'+opt.expname+'_loss.png')
     return inclasses
 
 if __name__ == "__main__":
     opt = options.train_options()     
     inclasses = main(opt)
-    #print("Training finished for "+ inclasses)
+    text_file1 = open("classnames.txt","a")
+    text_file1.write("%s \n" % (inclasses[0]))
+    text_file1.close()    
+#print("Training finished for "+ inclasses)

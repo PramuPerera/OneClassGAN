@@ -15,13 +15,13 @@ text_file1.close()
 for itt in range(50):
         text_file1 = open(opt.dataset + "_progress1.txt", "a")        
 	text_file = open(opt.dataset + "_progress.txt", "a")
-	os.system('python2  cvprappend.py --epoch 501  --expname grapesip64 --img_wd 64  --img_ht 64  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 0.4 ')
+	os.system('python2  cvprappend.py --epochs 1001  --expname grapesip64 --img_wd 125  --img_ht 125  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 500 --seed 1000 --append 0')
 
 	auc1 = []
 	auc2=[]
 	auc3=[]
 	auc4=[]
-	ran = range(0,500,10)
+	ran = range(0,1000,10)
 	for i in ran:
 	    opt.epochs = i
 	    roc_auc = ocgantestdisjoint.main(opt)
@@ -32,21 +32,37 @@ for itt in range(50):
 	    auc4.append(roc_auc[3])
 
 	#Pick best model w.r.t criterion 1
-	i = np.argmin(np.array(auc1))
+
         imax = np.argmax(np.array(auc1))
-	opt.epochs = ran[i]
+	opt.epochs = ran[imax]
 	opt.istest=1
-        res = ocgantestdisjoint.main(opt)[0]
-        print(res)
+        res1 = ocgantestdisjoint.main(opt)[0]
+        print(res1)
+        
+        imax = np.argmax(np.array(auc2))
         opt.epochs = ran[imax]
         opt.istest=1
-        res1 = ocgantestdisjoint.main(opt)[0]
+        res2 = ocgantestdisjoint.main(opt)[1]
+        print(res2)
 
-        text_file.write("%s \n" % (str(res)))
+        imax = np.argmax(np.array(auc3))
+        opt.epochs = ran[imax]
+        opt.istest=1
+        res3  = ocgantestdisjoint.main(opt)[2]
+        print(res3)
+
+        imax = np.argmax(np.array(auc4))
+        opt.epochs = ran[imax]
+        opt.istest=1
+        res4 = ocgantestdisjoint.main(opt)[3]
+        print(res4)
+
+
+
+        text_file.write("%s %s %s %s\n" % (str(res1), str(res2), str(res3), str(res4)))
 	text_file.close()
 
-        text_file1.write("%s \n" % (str(res1)))
-        text_file1.close()
+
 '''
 	print("AUC for criterion 1 (test): " + str(ocgantestdisjoint.main(opt)[0]))
 
@@ -57,7 +73,7 @@ for itt in range(50):
 #Pick best model w.r.t criterion 2
 i = np.argmin(np.array(auc2))
 opt.epochs = ran[i]
-opt.istest=0
+opt.istest=
 print(ran[i])
 print("AUC for criterion 2 (val): " + str(ocgantestdisjoint.main(opt)[1]))
 opt.istest=1

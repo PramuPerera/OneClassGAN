@@ -37,9 +37,9 @@ def facc(label, pred):
 
 def set_network(depth, ctx, lr, beta1, ndf, append=True):
     if append:
-            netD = models.Discriminator(in_channels=6, n_layers=depth, istest=True, ndf=ndf)
+            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf/4)
     else:        
-            netD = models.Discriminator(in_channels=3, n_layers=depth, istest=True, ndf=ndf)
+            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf/4)
     netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ndf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     # Initialize parameters
@@ -88,11 +88,11 @@ def main(opt):
         out_concat =  nd.concat(real_out, out, dim=1) if opt.append else  out
         output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
         out = (netG(real_in))
-        out_concat =  nd.concat(real_in, out, dim=1) if append else  out
+        out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
         output = netD(out_concat) #Denoised image
         output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
         output = nd.mean(output, (1, 3, 2)).asnumpy()
-        out_concat =  nd.concat(real_out, real_out, dim=1) if append else  real_out
+        out_concat =  nd.concat(real_out, real_out, dim=1) if opt. append else  real_out
         output2 = netD(out_concat) #Image with no noise
         output2 = nd.mean(output2, (1, 3, 2)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())

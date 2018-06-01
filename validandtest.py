@@ -11,7 +11,7 @@ auc1 = []
 auc2=[]
 auc3=[]
 auc4=[]
-ran = range(0,500,10)
+ran = range(0,1000,10)
 for i in ran:
     opt.epochs = i
     roc_auc = ocgantestdisjoint.main(opt)
@@ -25,7 +25,7 @@ text_file.close()
 print('Validation Done')
 
 #Pick best model w.r.t criterion 1
-i = np.argmin(np.array(auc1))
+i = np.argmax(np.array(auc1))
 opt.epochs = ran[i]
 opt.istest=0
 print(ran[i])
@@ -36,7 +36,7 @@ print("AUC for criterion 1 (test): " + str(ocgantestdisjoint.main(opt)[0]))
 
 
 #Pick best model w.r.t criterion 2
-i = np.argmin(np.array(auc2))
+i = np.argmax(np.array(auc2))
 opt.epochs = ran[i]
 opt.istest=0
 print(ran[i])
@@ -47,7 +47,7 @@ print("AUC for criterion 2 (test): " + str(ocgantestdisjoint.main(opt)[1]))
 
 
 #Pick best model w.r.t criterion 3
-i = np.argmin(np.array(auc3))
+i = np.argmax(np.array(auc3))
 opt.epochs = ran[i]
 opt.istest=0
 print(ran[i])
@@ -58,7 +58,7 @@ print("AUC for criterion 3 (test): " + str(ocgantestdisjoint.main(opt)[2]))
 
 
 #Pick best model w.r.t criterion 4
-i = np.argmin(np.array(auc4))
+i = np.argmax(np.array(auc4))
 opt.epochs = ran[i]
 opt.istest=0
 print(ran[i])
