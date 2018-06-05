@@ -9,7 +9,8 @@ def train_options():
     parser.add_argument("--dataset", default="Caltech256",
                         help="Specify the training dataset  ")
     parser.add_argument("--lr", default="0.0002", type=float, help="Base learning rate")
-    parser.add_argument("--ngf", default=64, type=int, help="Number of base filters")
+    parser.add_argument("--ngf", default=64, type=int, help="Number of base filters in Generator")
+    parser.add_argument("--ndf", default=64, type=int, help="Number of base filters in Discriminator")
     parser.add_argument("--beta1", default=0.5, type=float, help="Parameter for Adam")
     parser.add_argument("--lambda1", default=100, type=int, help="Weight of reconstruction loss")
     parser.add_argument("--pool_size", default=50, type=int, help="Number of pool for discriminator")
@@ -24,7 +25,7 @@ def train_options():
     parser.add_argument("--seed", default=-1, type=float, help="Seed generator. Use -1 for random.")
     parser.add_argument("--append", default=1, type=int, help="Append discriminator input. 1 for true")
 
-    
+    parser.add_argument("--classes", default="", help="Name of training class. Keep blank for random")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
@@ -51,7 +52,8 @@ def test_options():
     parser.add_argument("--use_gpu", default=1, type=int,  help="1 to use GPU  ")
     parser.add_argument("--dataset", default="Caltech256",
                         help="Specify the training dataset  ")
-    parser.add_argument("--ngf", default=64, type=int, help="Number of base filters")
+    parser.add_argument("--ngf", default=64, type=int, help="Number of base filters in Generator")
+    parser.add_argument("--ndf", default=64, type=int, help="Number of base filters in Discriminator")
     parser.add_argument("--datapath", default='/users/pramudi/Documents/data/', help="Data path")
     parser.add_argument("--img_wd", default=256, type=int, help="Image width")
     parser.add_argument("--img_ht", default=256, type=int, help="Image height")

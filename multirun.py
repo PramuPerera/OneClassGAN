@@ -15,7 +15,7 @@ text_file1.close()
 for itt in range(50):
         text_file1 = open(opt.dataset + "_progress1.txt", "a")        
 	text_file = open(opt.dataset + "_progress.txt", "a")
-	os.system('python2  cvprappend.py --epochs 1001  --expname grapesip64 --img_wd 125  --img_ht 125  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 500 --seed 1000 --append 0')
+	os.system('python2  cvprappend.py --epochs 1001 --ndf 16 --ngf 64  --expname grapesip64 --img_wd 125  --img_ht 125  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 500 --seed 1000 --append 0')
 
 	auc1 = []
 	auc2=[]

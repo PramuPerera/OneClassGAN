@@ -220,20 +220,21 @@ class CEGenerator(HybridBlock):
                                            padding=padding, in_channels=128,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
-            self.model.add(LeakyReLU(alpha=0.2))
-
+            #self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(Activation(activation='relu'))
             for n in range(1, n_layers):
                 nf_mult = nf_mult / 2
                 self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=2,
                                                padding=padding, in_channels=ndf * nf_mult,
                                                use_bias=use_bias))
                 self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
-                self.model.add(LeakyReLU(alpha=0.2))
-
+                #self.model.add(LeakyReLU(alpha=0.2))
+                self.model.add(Activation(activation='relu'))
             self.model.add(Conv2DTranspose(channels=in_channels, kernel_size=kernel_size, strides=2,
                                            padding=padding, in_channels=ndf))
 
-            self.model.add(LeakyReLU(alpha=0.2))
+            #self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(Activation(activation='tanh'))
 
     def hybrid_forward(self, F, x):
         out = self.model(x)

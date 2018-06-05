@@ -1,6 +1,6 @@
 import os
 import numpy as np
-def loadPaths(dataset, datapath, expname, minquery = 16):
+def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
     # read names of classes; treat last class as clutter
     text_file = open(dataset + "_folderlist.txt", "r")
     folders = text_file.readlines()
@@ -22,8 +22,10 @@ def loadPaths(dataset, datapath, expname, minquery = 16):
     #inclasses = ['092.grapes', '109.hot-tub', '148.mussels']
     #inclasses = ['092.grapes']
     #inclasses = [inclasses]
+    #print(inclasses)
+    if classes != "":
+	inclasses = [classes]
     print(inclasses)
-
     # first 150 of each image is treated as training. remainder is treated as testing
     for lbl, nclass in enumerate(inclasses):
         dirs = os.listdir(datapath + dataset + '/' + nclass)

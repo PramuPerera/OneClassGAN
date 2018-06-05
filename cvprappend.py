@@ -27,12 +27,12 @@ import argparse
 import options
 #logging.basicConfig()
 
-def set_network(depth, ctx, lr, beta1, ngf, append=True, solver='adam'):
+def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
-        netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+        netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     else:
-	netD = models.Discriminator(in_channels=3, n_layers =depth-1, ndf=ngf/4)
+	netD = models.Discriminator(in_channels=3, n_layers =depth-1, ndf=ndf)
     netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
 
@@ -73,7 +73,7 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
         btic = time.time()
         train_data.reset()
         iter = 0
-	if epoch>500:
+	if epoch>250:
  		trainerD.set_learning_rate(dlr * (1-int(epoch-250)/1000))
         	trainerG.set_learning_rate(glr * (1-int(epoch-250)/1000))
         #print('learning rate : '+str(trainerD.learning_rate ))
@@ -170,10 +170,10 @@ def main(opt):
     if opt.seed != -1:
             random.seed(opt.seed)
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
-    inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1)
+    inclasspaths , inclasses = dload.loadPaths(opt.dataset, opt.datapath, opt.expname, opt.batch_size+1, opt.classes)
     train_data, val_data = load_image.load_image(inclasspaths, opt.batch_size, opt.img_wd, opt.img_ht, opt.noisevar)
     print('Data loading done.')
-    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1, opt.ngf, opt.append)
+    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
     if opt.graphvis:
         print(netG)
     print('training')

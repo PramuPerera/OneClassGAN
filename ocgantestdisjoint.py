@@ -21,7 +21,7 @@ from datetime import datetime
 import time
 import logging
 import options
-
+import visual
 
 import argparse
 #logging.basicConfig()
@@ -35,12 +35,12 @@ def facc(label, pred):
 
 
 
-def set_network(depth, ctx, lr, beta1, ndf, append=True):
+def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
     if append:
-            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf/4)
+            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
     else:        
-            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf/4)
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ndf)  # UnetGenerator(in_channels=3, num_downs=8) #
+            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
+    netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -69,7 +69,7 @@ def main(opt):
                 testclasslabels.append(1)
 
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
-    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, 0, 0, opt.ngf, opt.append)
+    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
     netG.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_G.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
     lbllist = [];
@@ -84,8 +84,8 @@ def main(opt):
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
-        out = (netG(real_out))
-        out_concat =  nd.concat(real_out, out, dim=1) if opt.append else  out
+        outnn = (netG(real_out))
+        out_concat =  nd.concat(real_out, outnn, dim=1) if opt.append else  outnn
         output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
         out = (netG(real_in))
         out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
@@ -100,6 +100,19 @@ def main(opt):
         scorelist2 = scorelist2+list(output2)
         scorelist3 = scorelist3+list(output3)
         scorelist4 = scorelist4+list(output4)
+	
+	fake_img1 = nd.concat(real_in[0],real_out[0], out[0], outnn[0],dim=1)
+        fake_img2 = nd.concat(real_in[1],real_out[1], out[1],outnn[1], dim=1)
+        fake_img3 = nd.concat(real_in[2],real_out[2], out[2], outnn[2], dim=1)
+        fake_img4 = nd.concat(real_in[3],real_out[3],out[3],outnn[3], dim=1)
+        fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=2)
+        #print(np.shape(fake_img))
+        visual.visualize(fake_img)
+        plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
+
+
+
+
     fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
     roc_auc1 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
