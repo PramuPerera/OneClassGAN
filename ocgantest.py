@@ -82,8 +82,8 @@ print('Loading Done')
 GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 L1_loss = gluon.loss.L1Loss()
 netG, netD, trainerG, trainerD = set_network()
-netG.load_params('checkpoints/testnet_40_G.params', ctx=ctx)
-netD.load_params('checkpoints/testnet_40_D.params', ctx=ctx)
+netG.load_params( "checkpoints/"+expname+"_"+str(epoch)+"_G.params", ctx=ctx)
+netD.load_params("checkpoints/"+expname+"_"+str(epoch)+"_D.params", ctx=ctx)
 print('Loading model done')
 
 lbllist = [];

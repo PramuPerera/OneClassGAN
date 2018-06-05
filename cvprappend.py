@@ -27,6 +27,32 @@ import argparse
 import options
 #logging.basicConfig()
 
+
+def set_test_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
+    if append:
+            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
+    else:   
+            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
+    netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+
+    # Initialize parameters
+    models.network_init(netG, ctx=ctx)
+    models.network_init(netD, ctx=ctx)
+
+    # trainer for the generator and the discriminator
+    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+
+    return netG, netD, trainerG, trainerD
+
+
+
+
+
+
+
+
+
 def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
@@ -55,6 +81,8 @@ def facc(label, pred):
     return ((pred > 0.5) == label).mean()
 
 def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True):
+
+    netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
     dlr = trainerD.learning_rate 
     glr = trainerG.learning_rate     
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
@@ -142,12 +170,20 @@ def train(pool_size, epochs, train_data, ctx, netG, netD, trainerG, trainerD, la
             netD.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
             netG.save_params(filename)
+   	    netGT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_G.params', ctx=ctx)
+    	    netDT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_D.params', ctx=ctx)
             # Visualize one generated image for each epoch
             fake_img1 = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
             fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
-            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=2)
+	    fake_out = netGT(real_in)
+            fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
+            fake_img2T = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
+            fake_img3T = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
+            fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
+
+            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4,fake_img1T,fake_img2T, fake_img3T,fake_img4T ,dim=2)
             #print(np.shape(fake_img))
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')

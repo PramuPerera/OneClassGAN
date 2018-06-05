@@ -24,7 +24,7 @@ def train_options():
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
     parser.add_argument("--seed", default=-1, type=float, help="Seed generator. Use -1 for random.")
     parser.add_argument("--append", default=1, type=int, help="Append discriminator input. 1 for true")
-
+    parser.add_argument("--istest", default=1, type=int, help="Is this testing?. 1 for true")
     parser.add_argument("--classes", default="", help="Name of training class. Keep blank for random")
     args = parser.parse_args()
     if args.use_gpu == 1:
@@ -39,7 +39,10 @@ def train_options():
         args.append = True
     else:
         args.append = False
-    
+    if args.istest == 1:
+        args.istest = True
+    else:
+        args.istest = False
     return args
 
 
@@ -62,7 +65,7 @@ def test_options():
     parser.add_argument("--istest", default=1, type=float, help="if test set 1, otherwise validation")
     parser.add_argument("--trainstring", default='', help="arguments used for training (Optional)")
     parser.add_argument("--append", default=1, type=int, help="Append discriminator input. 1 for true")
-
+    parser.add_argument("--isvalidation", default=0, type=float, help="Pass through training set. Utility for development.")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
@@ -77,5 +80,8 @@ def test_options():
         args.append = True
     else:
         args.append = False
-        
+    if args.isvalidation == 1:
+        args.isvalidation = True
+    else:
+        args.isvalidation = False
     return args

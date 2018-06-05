@@ -58,8 +58,6 @@ def main(opt):
     testclasslabels = []
     if opt.istest:
         filename = '_testlist.txt'
-    elif opt.isvalidation:
-	filename = '_trainlist.txt'
     else:
         filename = '_validationlist.txt'        
     with open(opt.dataset+"_"+opt.expname+filename , 'r') as f:
@@ -103,7 +101,7 @@ def main(opt):
         scorelist3 = scorelist3+list(output3)
         scorelist4 = scorelist4+list(output4)
 	
-        fake_img1 = nd.concat(real_in[0],real_out[0], out[0], outnn[0],dim=1)
+	fake_img1 = nd.concat(real_in[0],real_out[0], out[0], outnn[0],dim=1)
         fake_img2 = nd.concat(real_in[1],real_out[1], out[1],outnn[1], dim=1)
         fake_img3 = nd.concat(real_in[2],real_out[2], out[2], outnn[2], dim=1)
         fake_img4 = nd.concat(real_in[3],real_out[3],out[3],outnn[3], dim=1)
@@ -112,21 +110,18 @@ def main(opt):
         visual.visualize(fake_img)
         plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
 
-    if not opt.isvalidation:
 
-	
-	    fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
-	    roc_auc1 = auc(fpr, tpr)
-	    fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
-	    roc_auc2 = auc(fpr, tpr)
-	    fpr, tpr, _ = roc_curve(lbllist, scorelist3, 1)
-	    roc_auc3 = auc(fpr, tpr)
-	    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
-	    roc_auc4 = auc(fpr, tpr)
-	    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
-    else:
-	    return([0,0,0,0])
 
+
+    fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
+    roc_auc1 = auc(fpr, tpr)
+    fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
+    roc_auc2 = auc(fpr, tpr)
+    fpr, tpr, _ = roc_curve(lbllist, scorelist3, 1)
+    roc_auc3 = auc(fpr, tpr)
+    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
+    roc_auc4 = auc(fpr, tpr)
+    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
 
 if __name__ == "__main__":
     opt = options.test_options()
