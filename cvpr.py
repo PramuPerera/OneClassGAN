@@ -30,10 +30,10 @@ import options
 
 def set_test_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
     if append:
-            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
+            netD = models.Discriminator(in_channels=6, n_layers=3, istest=True, ndf=ndf)
     else:   
-            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+            netD = models.Discriminator(in_channels=3, n_layers=3, istest=True, ndf=ndf)
+    netG = models.CEGeneratorP(in_channels=3, numdowns=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
@@ -56,12 +56,12 @@ def set_test_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
 def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
-        netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+        netD = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     else:
-	netD = models.Discriminator(in_channels=3, n_layers =depth-1, ndf=ndf)
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+	netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
+    #netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
-
+    netG = models.CEGenerator(in_channels=3, n_layers =depth, ndf=ngf)
     # Initialize parameters
     models.network_init(netG, ctx=ctx)
     models.network_init(netD, ctx=ctx)
@@ -82,7 +82,7 @@ def facc(label, pred):
 
 def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True):
 
-    netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
+    #netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
     dlr = trainerD.learning_rate 
     glr = trainerG.learning_rate     
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
@@ -170,8 +170,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             netD.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
             netG.save_params(filename)
-   	    netGT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_G.params', ctx=ctx)
-    	    netDT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_D.params', ctx=ctx)
+   	    #netGT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_G.params', ctx=ctx)
+    	    #netDT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_D.params', ctx=ctx)
             # Visualize one generated image for each epoch
             fake_img1 = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
@@ -181,7 +181,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
 	    for vbatch in val_data:
             	real_in = vbatch.data[0].as_in_context(ctx)
             	real_out = vbatch.data[1].as_in_context(ctx)
-	    	fake_out = netGT(real_in)
+	    	fake_out = netG(real_in)
 
 
             fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)

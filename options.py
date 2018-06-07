@@ -26,6 +26,7 @@ def train_options():
     parser.add_argument("--append", default=1, type=int, help="Append discriminator input. 1 for true")
     parser.add_argument("--istest", default=1, type=int, help="Is this testing?. 1 for true")
     parser.add_argument("--classes", default="", help="Name of training class. Keep blank for random")
+    parser.add_argument("--usegan", default=1, type=int,  help="set 1 for use gan loss.")
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
@@ -43,6 +44,11 @@ def train_options():
         args.istest = True
     else:
         args.istest = False
+    if args.usegan == 1:
+        args.usegan = True
+    else:
+        args.usegan = False    
+
     return args
 
 
@@ -66,12 +72,16 @@ def test_options():
     parser.add_argument("--trainstring", default='', help="arguments used for training (Optional)")
     parser.add_argument("--append", default=1, type=int, help="Append discriminator input. 1 for true")
     parser.add_argument("--isvalidation", default=0, type=float, help="Pass through training set. Utility for development.")
+    parser.add_argument("--usegan", default=1, type=int,  help="set 1 for use gan loss.")    
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
     else:
         args.use_gpu = False
-        
+    if args.usegan == 1:
+        args.usegan = True
+    else:
+        args.usegan = False    
     if args.istest == 1:
         args.istest = True
     else:

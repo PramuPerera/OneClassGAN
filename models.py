@@ -16,7 +16,7 @@ class UnetSkipUnit(HybridBlock):
 
         with self.name_scope():
             self.outermost = outermost
-            en_conv = Conv2D(channels=inner_channels, kernel_size=4, strides=2, padding=1,
+            en_conv = Conv2D(channels=inner_channels, kernel_size=5, strides=2, padding=0,
                              in_channels=outer_channels, use_bias=use_bias)
             en_relu = LeakyReLU(alpha=0.2)
             en_norm = BatchNorm(momentum=0.1, in_channels=inner_channels)
@@ -24,20 +24,20 @@ class UnetSkipUnit(HybridBlock):
             de_norm = BatchNorm(momentum=0.1, in_channels=outer_channels)
 
             if innermost:
-                de_conv = Conv2DTranspose(channels=outer_channels, kernel_size=4, strides=2, padding=1,
+                de_conv = Conv2DTranspose(channels=outer_channels, kernel_size=5, strides=2, padding=0,
                                           in_channels=inner_channels, use_bias=use_bias)
                 encoder = [en_relu, en_conv]
                 decoder = [de_relu, de_conv, de_norm]
                 model = encoder + decoder
             elif outermost:
-                de_conv = Conv2DTranspose(channels=outer_channels, kernel_size=4, strides=2, padding=1,
-                                          in_channels=inner_channels * 2)
+                de_conv = Conv2DTranspose(channels=outer_channels, kernel_size=5, strides=2, padding=0,
+                                          in_channels=inner_channels)
                 encoder = [en_conv]
                 decoder = [de_relu, de_conv, Activation(activation='tanh')]
                 model = encoder + [inner_block] + decoder
             else:
-                de_conv = Conv2DTranspose(channels=outer_channels, kernel_size=4, strides=2, padding=1,
-                                          in_channels=inner_channels * 2, use_bias=use_bias)
+                de_conv = Conv2DTranspose(channels=outer_channels, kernel_size=5, strides=2, padding=0,
+                                          in_channels=inner_channels, use_bias=use_bias)
                 encoder = [en_relu, en_conv, en_norm]
                 decoder = [de_relu, de_conv, de_norm]
                 model = encoder + [inner_block] + decoder
@@ -53,7 +53,7 @@ class UnetSkipUnit(HybridBlock):
         if self.outermost:
             return self.model(x)
         else:
-            return F.concat(self.model(x), x, dim=1)
+            return self.model(x)
 
 
 # Define Unet generator
@@ -74,6 +74,7 @@ class UnetGenerator(HybridBlock):
             self.model = unet
 
     def hybrid_forward(self, F, x):
+        print(np.shape(self.model(x)))
         return self.model(x)
 
 
@@ -206,18 +207,18 @@ class CEGenerator(HybridBlock):
 
             nf_mult_prev = nf_mult
             nf_mult = 2 ** n_layers
-            self.model.add(Conv2D(channels=128, kernel_size=kernel_size, strides=1,
+            self.model.add(Conv2D(channels=4096, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
-            self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
+            #self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
             if usetanh:
                 self.model.add(Activation(activation='tanh'))
             else:
                 self.model.add(LeakyReLU(alpha=0.2))
 
             # Decoder
-            self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=1,
-                                           padding=padding, in_channels=128,
+            self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=2,
+                                           padding=padding, in_channels=4096,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
             #self.model.add(LeakyReLU(alpha=0.2))
@@ -229,6 +230,8 @@ class CEGenerator(HybridBlock):
                                                use_bias=use_bias))
                 self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
                 #self.model.add(LeakyReLU(alpha=0.2))
+                if n==2:
+		      self.model.add(Dropout(rate=0.5))
                 self.model.add(Activation(activation='relu'))
             self.model.add(Conv2DTranspose(channels=in_channels, kernel_size=kernel_size, strides=2,
                                            padding=padding, in_channels=ndf))
@@ -240,6 +243,75 @@ class CEGenerator(HybridBlock):
         out = self.model(x)
         # print(out)
         return out
+
+
+
+class CEGeneratorP(HybridBlock):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, usetanh = False ):
+        super(CEGeneratorP, self).__init__()
+
+        with self.name_scope():
+            self.model = HybridSequential()
+            kernel_size = 5
+            padding = 0 #int(np.ceil((kernel_size - 1) / 2))
+            self.model.add(Conv2D(channels=ndf, kernel_size=kernel_size, strides=2,
+                                  padding=padding, in_channels=in_channels))
+            self.model.add(LeakyReLU(alpha=0.2))
+            nf_mult = 2;
+            nf_mult_prev = 1;
+
+            nf_mult = 1
+            for n in range(1, n_layers):
+                nf_mult_prev = nf_mult
+                nf_mult = 2 ** n
+                self.model.add(Conv2D(channels=ndf * nf_mult, kernel_size=kernel_size, strides=2,
+                                      padding=padding, in_channels=ndf * nf_mult_prev,
+                                      use_bias=use_bias))
+                self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult, use_global_stats=istest))
+                self.model.add(LeakyReLU(alpha=0.2))
+
+            nf_mult_prev = nf_mult
+            nf_mult = 2 ** n_layers
+            self.model.add(Conv2D(channels=4096, kernel_size=kernel_size, strides=2,
+                                  padding=padding, in_channels=ndf * nf_mult_prev,
+                                  use_bias=use_bias))
+            #self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
+            if usetanh:
+                self.model.add(Activation(activation='tanh'))
+            else:
+                self.model.add(LeakyReLU(alpha=0.2))
+
+            # Decoder
+            self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=2,
+                                           padding=padding, in_channels=4096,
+                                           use_bias=use_bias))
+            self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
+            #self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(Activation(activation='relu'))
+            for n in range(1, n_layers):
+                nf_mult = nf_mult / 2
+                self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=2,
+                                               padding=padding, in_channels=ndf * nf_mult,
+                                               use_bias=use_bias))
+                self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
+                #self.model.add(LeakyReLU(alpha=0.2))
+                if n==2:
+                      self.model.add(Dropout(rate=0.5))
+                self.model.add(Activation(activation='relu'))
+            self.model.add(Conv2DTranspose(channels=in_channels, kernel_size=kernel_size, strides=2,
+                                           padding=padding, in_channels=ndf))
+
+            #self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(Activation(activation='tanh'))
+
+    def hybrid_forward(self, F, x):
+        out = self.model(x)
+        # print(out)
+        return out
+
+
+
+
 
 
 
