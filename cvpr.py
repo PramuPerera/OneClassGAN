@@ -81,7 +81,8 @@ def facc(label, pred):
     return ((pred > 0.5) == label).mean()
 
 def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True):
-
+    
+    text_file = open(expname + "_validtest.txt", "w")
     #netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
     dlr = trainerD.learning_rate 
     glr = trainerG.learning_rate     
@@ -95,7 +96,6 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
     acc_rec = []
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
-    print(epochs)
     for epoch in range(epochs):
         tic = time.time()
         btic = time.time()
@@ -150,7 +150,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             name, acc = metric.get()
 	    acc_rec.append(acc)
             # Print log infomation every ten batches
-            if iter % 10 == 0:
+            if iter % 20 == 0:
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
@@ -170,29 +170,40 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             netD.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
             netG.save_params(filename)
-   	    #netGT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_G.params', ctx=ctx)
-    	    #netDT.load_params('checkpoints/'+opt.expname+'_'+str(epoch)+'_D.params', ctx=ctx)
-            # Visualize one generated image for each epoch
             fake_img1 = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
             fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
             val_data.reset()
 	    for vbatch in val_data:
+                
             	real_in = vbatch.data[0].as_in_context(ctx)
             	real_out = vbatch.data[1].as_in_context(ctx)
-	    	fake_out = netG(real_in)
+            	fake_out = netG(real_in)
+        	fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
+                output = netD(fake_concat)
+                fake_label = nd.zeros(output.shape, ctx=ctx)
+                metric2.update([fake_label, ], [output, ])
+                real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
+                output = netD(real_concat)
+                real_label = nd.ones(output.shape, ctx=ctx)
+                metric2.update([real_label, ], [output, ])
 
+            _, acc2 = metric2.get()
+            text_file.write("%s %s %s\n" % (str(epoch), str(acc), str(acc2)))
+            metric2.reset()
 
             fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2T = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
             fake_img3T = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
-
             fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4,fake_img1T,fake_img2T, fake_img3T,fake_img4T ,dim=2)
-            #print(np.shape(fake_img))
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
+            text_file.close()
+
+        
+            
     return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec])
 
 
@@ -217,8 +228,6 @@ def main(opt):
     print('Data loading done.')
 
     if opt.istest:
-	    
-
 	    testclasspaths = []
 	    testclasslabels = []
 	    if opt.istest:
