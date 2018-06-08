@@ -90,6 +90,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
     L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
+    metric2 = mx.metric.MSE()
     loss_rec_G = []
     loss_rec_D = []
     loss_rec_R = []
@@ -150,7 +151,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             name, acc = metric.get()
 	    acc_rec.append(acc)
             # Print log infomation every ten batches
-            if iter % 20 == 0:
+            if iter % 10 == 0:
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
@@ -163,6 +164,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
 
         name, acc = metric.get()
         metric.reset()
+        train_data.reset()
+
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
         if epoch%10 ==0:
@@ -175,32 +178,25 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
             val_data.reset()
+           
 	    for vbatch in val_data:
                 
             	real_in = vbatch.data[0].as_in_context(ctx)
             	real_out = vbatch.data[1].as_in_context(ctx)
             	fake_out = netG(real_in)
-        	fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
-                output = netD(fake_concat)
-                fake_label = nd.zeros(output.shape, ctx=ctx)
-                metric2.update([fake_label, ], [output, ])
-                real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
-                output = netD(real_concat)
-                real_label = nd.ones(output.shape, ctx=ctx)
-                metric2.update([real_label, ], [output, ])
-
+                metric2.update([fake_out, ], [real_out, ])
             _, acc2 = metric2.get()
-            text_file.write("%s %s %s\n" % (str(epoch), str(acc), str(acc2)))
+            text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
             metric2.reset()
 
             fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2T = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
             fake_img3T = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
-            fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
-            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4,fake_img1T,fake_img2T, fake_img3T,fake_img4T ,dim=2)
+            #fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
+            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img1T,fake_img2T, fake_img3T,dim=2)
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
-            text_file.close()
+    text_file.close()
 
         
             
