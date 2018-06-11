@@ -80,7 +80,7 @@ def facc(label, pred):
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
-def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True):
+def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True, useAE = False):
     
     text_file = open(expname + "_validtest.txt", "w")
     #netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
@@ -98,6 +98,34 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
     for epoch in range(epochs):
+
+     if useAE:
+	for batch in train_data:
+		train_data.reset()
+		real_in = batch.data[0].as_in_context(ctx)
+        	real_out = batch.data[1].as_in_context(ctx)
+		fake_out = netG(real_in)
+		loss = L1_loss(real_out, fake_out)
+		loss.backward()
+		trainerG.step(batch.data[0].shape[0])
+		metric2.update([real_out, ], [fake_out, ])
+	        if epoch%10 ==0:
+        	    	 filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
+			 netG.save_params(filename)
+            		 fake_img1 = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
+            		 fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
+            		 fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
+            		 fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
+			 #fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
+            		 fake_img = nd.concat(fake_img1,fake_img2, fake_img3,dim=2)
+            		 visual.visualize(fake_img)
+            		 plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
+        train_data.reset()
+	name, acc = metric.get()
+        metric2.reset()
+	print("training acc: "+ acc)
+
+     else:
         tic = time.time()
         btic = time.time()
         train_data.reset()
@@ -215,7 +243,11 @@ def print_result():
         visual.visualize(img_out[0])
     plt.show()
 
-def main(opt):   
+def main(opt): 
+    if opt.useAE == 1:
+	useAE = True
+    else:
+	useAE = False  
     if opt.seed != -1:
             random.seed(opt.seed)
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
@@ -306,7 +338,7 @@ def main(opt):
 	        print(netG)
 	    print('training')
 	    print(opt.epochs)
-	    loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname,  opt.append)
+	    loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
 	    plt.gcf().clear()
 	    plt.plot(loss_vec[0], label="D", alpha = 0.7)
 	    plt.plot(loss_vec[1], label="G", alpha=0.7)

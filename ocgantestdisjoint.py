@@ -22,7 +22,7 @@ import time
 import logging
 import options
 import visual
-
+import random
 import argparse
 #logging.basicConfig()
 
@@ -56,6 +56,7 @@ def main(opt):
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
     testclasspaths = []
     testclasslabels = []
+    print('loading test files')
     if opt.istest:
         filename = '_testlist.txt'
     elif opt.isvalidation:
@@ -69,8 +70,20 @@ def main(opt):
                 testclasslabels.append(0)
             else:
                 testclasslabels.append(1)
+    neworder = range(len(testclasslabels))
+    neworder = shuffle(neworder)
+    
+    c = list(zip(testclasslabels, testclasspaths))
 
+    random.shuffle(c)
+
+    testclasslabels, testclasspaths = zip(*c)
+    testclasslabels = testclasslabels[1:2000]
+    testclasspaths = testclasspaths[1:2000]
+
+    print('loading pictures')
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
+    print('picture loading done')
     netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
     netG.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_G.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)

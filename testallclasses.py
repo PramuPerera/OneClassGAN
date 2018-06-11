@@ -14,17 +14,18 @@ text_file = open(opt.dataset + "_folderlist.txt", "r")
 folders = text_file.readlines()
 text_file.close()
 folders = [i.split('\n', 1)[0] for i in folders]
-follist = range(0,1000,10)
+follist = range(0,1001,10)
 for classname in folders:
     
         epoch = []
         trainerr = []
         valerr =[]
-	os.system('python2  cvpriter.py --epochs 1001 --ndf 16 --ngf 64  --istest 0 --expname grapesip64 --img_wd 61  --img_ht 61  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 500 --seed 1000 --append 0 --classes '+ classname)
+	os.system('python2  cvpriter.py  --epochs 1001 --batch_size 16  --ndf 16 --ngf 64  --istest 0 --expname grapesip64 --img_wd 61  --img_ht 61  --depth 3  --datapath ../ --noisevar 0.2  --lambda1 500 --seed 1000 --append 0 --classes '+ classname)
         res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()
         results = [i.split('\n', 1)[0] for i in results]
+        print(results)
         for line in results:
             temp = line.split(' ', 1)
 	    #print(temp)
@@ -32,11 +33,11 @@ for classname in folders:
             temp = temp[1].split(' ', 1)
             trainerr.append(temp[0])
             valerr.append(temp[1])
-
+        print(valerr)
         valep = np.argmin(np.array(valerr))
         trainep = np.argmin(np.array(trainerr))
-        #print(valep)
-        #print(trainep)
+        print(valerr[valep])
+        print(trainerr[trainep])
         opt.epochs =follist[ valep]
         roc_aucval = ocgantestdisjoint.main(opt)
         opt.epochs = follist[trainep]

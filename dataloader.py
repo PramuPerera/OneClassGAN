@@ -11,6 +11,7 @@ def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
     testclasspaths = []
     inclasslabels = []
     testclasslabels = []
+    print(folders)
     # randomly pick 3 classes making sure each has more than 150 images
     for i in range(len(folders) - 1):
         dirs = os.listdir(datapath + dataset + '/' + folders[i])
@@ -29,10 +30,10 @@ def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
     # first 150 of each image is treated as training. remainder is treated as testing
     for lbl, nclass in enumerate(inclasses):
         dirs = os.listdir(datapath + dataset + '/' + nclass)
-        for nfile in range(150):
+        for nfile in range(int(len(dirs)*0.8)):
             inclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             inclasslabels.append(lbl)
-        for nfile in range(151, len(dirs)):
+        for nfile in range(int(len(dirs)*0.8)+1, len(dirs)):
             testclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             testclasslabels.append(lbl)
     validationclasspaths = list(testclasspaths)
@@ -49,11 +50,13 @@ def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
         text_file.write("%s %s\n" % (fn, str(lbl)))
     text_file.close()
     #consider 'other' classes and get paths of their samples for validation
-    validation_set = list(set(folders)^set(valid_folders))
+    validation_set = list(set(folders)^set(inclasses))
+    print(validation_set)
     nofentriesperclass = 1+int(np.size(inclasslabels)/np.size(validation_set))
+    print(nofentriesperclass)
     for nclass in validation_set:
          dirs = os.listdir(datapath + dataset + '/' + nclass)
-         for nfile in range(nofentriesperclass):
+         for nfile in range(min(len(dirs),nofentriesperclass)):
             validationclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             validationclasslabels.append(-1)
     text_file = open(dataset + "_" + expname + "_validationlist.txt", "w")        

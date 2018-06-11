@@ -27,6 +27,8 @@ def train_options():
     parser.add_argument("--istest", default=1, type=int, help="Is this testing?. 1 for true")
     parser.add_argument("--classes", default="", help="Name of training class. Keep blank for random")
     parser.add_argument("--usegan", default=1, type=int,  help="set 1 for use gan loss.")
+    parser.add_argument("--useAE", default=0, type=int,  help="set 1 for use AE.")
+
     args = parser.parse_args()
     if args.use_gpu == 1:
         args.use_gpu = True
@@ -61,6 +63,7 @@ def test_options():
     parser.add_argument("--use_gpu", default=1, type=int,  help="1 to use GPU  ")
     parser.add_argument("--dataset", default="Caltech256",
                         help="Specify the training dataset  ")
+    parser.add_argument("--useAE", default=0, type=int,  help="set 1 for use AE.")
     parser.add_argument("--ngf", default=64, type=int, help="Number of base filters in Generator")
     parser.add_argument("--ndf", default=64, type=int, help="Number of base filters in Discriminator")
     parser.add_argument("--datapath", default='/users/pramudi/Documents/data/', help="Data path")
