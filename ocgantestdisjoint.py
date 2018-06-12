@@ -74,12 +74,12 @@ def main(opt):
     neworder = shuffle(neworder)
     
     c = list(zip(testclasslabels, testclasspaths))
-
+    print('shuffling')
     random.shuffle(c)
 
     testclasslabels, testclasspaths = zip(*c)
-    testclasslabels = testclasslabels[1:2000]
-    testclasspaths = testclasspaths[1:2000]
+    testclasslabels = testclasslabels[1:5000]
+    testclasspaths = testclasspaths[1:5000]
 
     print('loading pictures')
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
@@ -87,6 +87,7 @@ def main(opt):
     netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
     netG.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_G.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
+    print('Model loading done')
     lbllist = [];
     scorelist1 = [];
     scorelist2 = [];
@@ -96,6 +97,7 @@ def main(opt):
     count = 0
     for batch in (test_data):
         count+=1
+	print (str(count)) #, end="\r")
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)

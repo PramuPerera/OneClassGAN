@@ -61,32 +61,34 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
 	netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
     #netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
-    netG = models.CEGenerator(in_channels=3, n_layers =depth, ndf=ngf)
+    netEn = models.Encoder(in_channels=3, n_layers =depth, ndf=ngf)
+    netDe = models.Decoder(in_channels=3, n_layers =depth, ndf=ngf)
+
     # Initialize parameters
-    models.network_init(netG, ctx=ctx)
+    models.network_init(netEn, ctx=ctx)
+    models.network_init(netDe, ctx=ctx)
     models.network_init(netD, ctx=ctx)
     if solver=='adam':
 	    # trainer for the generator and the discriminator
-	    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+	    trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+            trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
 	    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     elif solver == 'sgd':
 	    print('sgd')
  	    trainerG = gluon.Trainer(netG.collect_params(), 'sgd', {'learning_rate': lr, 'momentum': 0.9} )
 	    trainerD = gluon.Trainer(netD.collect_params(), 'sgd', {'learning_rate': lr, 'momentum': 0.9})
-    return netG, netD, trainerG, trainerD
+    return netEn, netDe, netD, trainerEn, trainerDe, trainerD
 
 def facc(label, pred):
     pred = pred.ravel()
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
-def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, trainerD, lambda1, batch_size, expname, append=True, useAE = False):
+def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, trainerEn, trainerDe, trainerD, lambda1, batch_size, expname, append=True, useAE = False):
     
     text_file = open(expname + "_validtest.txt", "w")
     text_file.close()
     #netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
-    dlr = trainerD.learning_rate 
-    glr = trainerG.learning_rate     
     GAN_loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
     L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
@@ -131,9 +133,6 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
         btic = time.time()
         train_data.reset()
         iter = 0
-	if epoch>250:
- 		trainerD.set_learning_rate(dlr * (1-int(epoch-250)/1000))
-        	trainerG.set_learning_rate(glr * (1-int(epoch-250)/1000))
         #print('learning rate : '+str(trainerD.learning_rate ))
 	for batch in train_data:
             ############################
@@ -141,12 +140,22 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             ###########################
             real_in = batch.data[0].as_in_context(ctx)
             real_out = batch.data[1].as_in_context(ctx)
-
-            fake_out = netG(real_in)
+            soft_zero = 1e-10
+            fake_latent= netEn(real_in)
+            mu_lv = nd.split(fake_latent, axis=1, num_outputs=2)
+       	    mu = mu_lv[0]
+            lv = mu_lv[1]
+            eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096), ctx=model_ctx)
+            z = mu + nd.exp(0.5*lv)*eps
+            y = netDe(z)
+            fake_out = y
+            KL = 0.5*nd.sum(1+lv-mu*mu-nd.exp(lv),axis=1)
+            logloss = nd.sum(real_in*nd.log(y+self.soft_zero)+ (1-real_in)*nd.log(1-y+self.soft_zero), axis=1)
+            loss = -logloss-KL
             fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
             with autograd.record():
                 # Train with fake image
-                # Use image pooling to utilize history images
+                # Use image pooling to utilize history imagesi
                 output = netD(fake_concat)
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 errD_fake = GAN_loss(output, fake_label)
@@ -165,12 +174,26 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
             with autograd.record():
-                fake_out = netG(real_in)
+
+
+
+		fake_latent= netEn(real_in)
+                mu_lv = mx.split(fake_latent, axis=1, num_outputs=2)
+                mu = mu_lv[0]
+                lv = mu_lv[1]
+                eps = mx.random_normal(loc=0, scale=1, shape=(batch_size, 4096), ctx=model_ctx)
+                z = mu + mx.exp(0.5*lv)*eps
+                y = netDe(z)
+                fake_out = y
+                KL = 0.5*mx.sum(1+lv-mu*mu-mx.exp(lv),axis=1)
+                logloss = mx.sum(real_in*mx.log(y+self.soft_zero)+ (1-real_in)*mx.log(1-y+self.soft_zero), axis=1)
+                loss = -logloss-KL
+                #fake_out = netG(real_in)
                 fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
-                errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
-                errR = L1_loss(real_out, fake_out)
+                errG = GAN_loss(output, real_label) + KL*lambda1 #L1_loss(real_out, fake_out) * lambda1
+                errR = logloss#L1_loss(real_out, fake_out)
                 errG.backward()
 	   
             trainerG.step(batch.data[0].shape[0])
@@ -335,12 +358,12 @@ def main(opt):
 
 
     else:	
-	    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
+	    netEn, netDe,  netD, trainerEn, trainerDe, trainerD = set_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
 	    if opt.graphvis:
 	        print(netG)
 	    print('training')
 	    print(opt.epochs)
-	    loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netG, netD, trainerG, trainerD, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
+	    loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netEn, netDe,  netD, trainerEn, trainerDe, trainerD, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
 	    plt.gcf().clear()
 	    plt.plot(loss_vec[0], label="D", alpha = 0.7)
 	    plt.plot(loss_vec[1], label="G", alpha=0.7)

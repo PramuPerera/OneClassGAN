@@ -318,12 +318,10 @@ class CEGeneratorP(HybridBlock):
 
 class Encoder(HybridBlock):
     def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, usetanh = False ):
-        super(Encoder, self).__init__()
-
-        with self.name_scope():
+            super(Encoder, self).__init__()
             self.model = HybridSequential()
-            kernel_size = 4
-            padding = int(np.ceil((kernel_size - 1) / 2))
+            kernel_size = 5
+            padding = 0 #int(np.ceil((kernel_size - 1) / 2))
             self.model.add(Conv2D(channels=ndf, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=in_channels))
             self.model.add(LeakyReLU(alpha=0.2))
@@ -342,15 +340,17 @@ class Encoder(HybridBlock):
 
             nf_mult_prev = nf_mult
             nf_mult = 2 ** n_layers
-            self.model.add(Conv2D(channels=ndf * nf_mult, kernel_size=kernel_size, strides=1,
+            self.model.add(Conv2D(channels=4096, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
-            self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult, use_global_stats=istest))
+            #self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
             if usetanh:
                 self.model.add(Activation(activation='tanh'))
             else:
                 self.model.add(LeakyReLU(alpha=0.2))
-                
+
+
+                     
     def hybrid_forward(self, F, x):
         out = self.model(x)
         # print(out)
@@ -363,32 +363,32 @@ class Encoder(HybridBlock):
 
 class Decoder(HybridBlock):
     def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, usetanh = False ):
-        super(Decoder, self).__init__()
-
-        with self.name_scope():
-            nf_mult = 2 ** n_layers
+            super(Decoder, self).__init__()
             self.model = HybridSequential()
-            kernel_size = 4
-            padding = int(np.ceil((kernel_size - 1) / 2))
-            # Decoder
-            self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=1,
-                                           padding=padding, in_channels=ndf * nf_mult,
+            kernel_size = 5
+            padding = 0 
+	    nf_mult = 2 ** n_layers
+            self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=2,
+                                           padding=padding, in_channels=4096,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
-            self.model.add(LeakyReLU(alpha=0.2))
-
+            #self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(Activation(activation='relu'))
             for n in range(1, n_layers):
                 nf_mult = nf_mult / 2
                 self.model.add(Conv2DTranspose(channels=ndf * nf_mult / 2, kernel_size=kernel_size, strides=2,
                                                padding=padding, in_channels=ndf * nf_mult,
                                                use_bias=use_bias))
                 self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
-                self.model.add(LeakyReLU(alpha=0.2))
-
+                #self.model.add(LeakyReLU(alpha=0.2))
+                if n==2:
+                      self.model.add(Dropout(rate=0.5))
+                self.model.add(Activation(activation='relu'))
             self.model.add(Conv2DTranspose(channels=in_channels, kernel_size=kernel_size, strides=2,
                                            padding=padding, in_channels=ndf))
 
-            self.model.add(LeakyReLU(alpha=0.2))
+            #self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(Activation(activation='tanh'))
 
     def hybrid_forward(self, F, x):
         out = self.model(x)
