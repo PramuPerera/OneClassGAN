@@ -57,11 +57,11 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
         netD = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-        netD2 = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+        netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     else:
     	netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
-      	netD2 = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
+      	netD2 = models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
     	#netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     	#netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
     	netEn = models.Encoder(in_channels=3, n_layers =depth, ndf=ngf)

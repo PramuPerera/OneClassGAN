@@ -122,6 +122,23 @@ class Discriminator(HybridBlock):
         #print(np.shape(out))
         return out
 
+class LatentDiscriminator(HybridBlock):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_sigmoid=False, use_bias=False, istest = False, isthreeway = False):
+        super(LatentDiscriminator, self).__init__()
+
+        with self.name_scope():
+            self.model.add(dense(1024))
+            self.model.add(dense(256))
+            self.model.add(dense(64))
+            self.model.add(dense(16))            
+
+    def hybrid_forward(self, F, x):
+        out = self.model(x)
+        #print(np.shape(out))
+        return out
+
+
+
 
 '''
 class CEGenerator(HybridBlock):
