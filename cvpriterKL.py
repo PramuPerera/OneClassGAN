@@ -56,9 +56,9 @@ def set_test_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
 def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
-        netD = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+        netD = models.Discriminator(in_channels=6, n_layers =1 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     else:
-    	netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
+    	netD = models.Discriminator(in_channels=3, n_layers =1 , ndf=ndf)
     	#netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     	#netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
     	netEn = models.Encoder(in_channels=3, n_layers =depth, ndf=ngf)
@@ -119,7 +119,6 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, tr
             mu_lv = nd.split(fake_latent, axis=1, num_outputs=2)
 	    mu = (mu_lv[0])
             lv = (mu_lv[1])
-	    print(lv.shape)
 	    KL = 0.5*nd.nansum(1+lv-mu*mu-nd.exp(lv+soft_zero))
             eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 2048), ctx=ctx)
             z = mu + nd.exp(0.5*lv)*eps
