@@ -180,7 +180,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             name, acc = metric.get()
 	    acc_rec.append(acc)
             # Print log infomation every ten batches
-            if iter % 10 == 0:
+            if iter % 5 == 0:
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
@@ -197,7 +197,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
-        if epoch%10 ==0:
+        if epoch%5 ==0:
 	    text_file = open(expname + "_validtest.txt", "a")
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)

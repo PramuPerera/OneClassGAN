@@ -11,6 +11,7 @@ def load_image(fnames, batch_size, img_wd, img_ht,noisevar=0.2 , is_reversed=Fal
     print(np.shape(fnames))
     for img in fnames:
         img_arr = mx.image.imread(img).astype(np.float32)/127.5 - 1
+	#print(nd.max(img_arr[0]))
         img_arr = mx.image.imresize(img_arr, img_wd, img_ht)
         # Crop input and output images
         croppedimg = mx.image.fixed_crop(img_arr, 0, 0, img_wd, img_ht)

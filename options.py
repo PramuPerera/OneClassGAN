@@ -12,7 +12,7 @@ def train_options():
     parser.add_argument("--ngf", default=64, type=int, help="Number of base filters in Generator")
     parser.add_argument("--ndf", default=64, type=int, help="Number of base filters in Discriminator")
     parser.add_argument("--beta1", default=0.5, type=float, help="Parameter for Adam")
-    parser.add_argument("--lambda1", default=100, type=int, help="Weight of reconstruction loss")
+    parser.add_argument("--lambda1", default=100, type=float, help="Weight of reconstruction loss")
     parser.add_argument("--pool_size", default=50, type=int, help="Number of pool for discriminator")
     parser.add_argument("--datapath", default='/users/pramudi/Documents/data/', help="Data path")
     parser.add_argument("--img_wd", default=256, type=int, help="Image width")

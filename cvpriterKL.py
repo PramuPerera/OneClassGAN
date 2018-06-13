@@ -58,21 +58,21 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
     if append:
         netD = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     else:
-    netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
-    #netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
-    netEn = models.Encoder(in_channels=3, n_layers =depth, ndf=ngf)
-    netDe = models.Decoder(in_channels=3, n_layers =depth, ndf=ngf)
+    	netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
+    	#netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    	#netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
+    	netEn = models.Encoder(in_channels=3, n_layers =depth, ndf=ngf)
+    	netDe = models.Decoder(in_channels=3, n_layers =depth, ndf=ngf)
 
     # Initialize parameters
     models.network_init(netEn, ctx=ctx)
     models.network_init(netDe, ctx=ctx)
     models.network_init(netD, ctx=ctx)
     if solver=='adam':
-            # trainer for the generator and the discriminator
-	        trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-            trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-            trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+            # trainer for the generator and the discriminato
+		trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+		trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+		trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     elif solver == 'sgd':
             print('sgd')
             trainerG = gluon.Trainer(netG.collect_params(), 'sgd', {'learning_rate': lr, 'momentum': 0.9} )
@@ -107,7 +107,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, tr
         train_data.reset()
         iter = 0
         #print('learning rate : '+str(trainerD.learning_rate ))
-	    for batch in train_data:
+	for batch in train_data:
             ############################
             # (1) Update D network: maximize log(D(x, y)) + log(1 - D(x, G(x, z)))
             ###########################
@@ -115,15 +115,19 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, tr
             real_out = batch.data[1].as_in_context(ctx)
             soft_zero = 1e-10
             fake_latent= netEn(real_in)
+	    fake_latent = np.squeeze(fake_latent)
             mu_lv = nd.split(fake_latent, axis=1, num_outputs=2)
-            mu = mu_lv[0]
-            lv = mu_lv[1]
-            eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096), ctx=model_ctx)
+	    mu = (mu_lv[0])
+            lv = (mu_lv[1])
+	    print(lv.shape)
+	    KL = 0.5*nd.nansum(1+lv-mu*mu-nd.exp(lv+soft_zero))
+            eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 2048), ctx=ctx)
             z = mu + nd.exp(0.5*lv)*eps
+	    z = nd.expand_dims(nd.expand_dims(z,2),2)
             y = netDe(z)
             fake_out = y
-            KL = 0.5*nd.sum(1+lv-mu*mu-nd.exp(lv),axis=1)
-            logloss = nd.sum(real_in*nd.log(y+self.soft_zero)+ (1-real_in)*nd.log(1-y+self.soft_zero), axis=1)
+	    
+	    logloss = nd.nansum(real_in*nd.log(y+soft_zero)+ (1-real_in)*nd.log(1-y+soft_zero))
             loss = -logloss-KL
             fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
             with autograd.record():
@@ -148,26 +152,27 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, tr
             ###########################
             with autograd.record():
 
-                fake_latent= netEn(real_in)
-                mu_lv = mx.split(fake_latent, axis=1, num_outputs=2)
+                fake_latent= np.squeeze(netEn(real_in))
+                mu_lv = nd.split(fake_latent, axis=1, num_outputs=2)
                 mu = mu_lv[0]
                 lv = mu_lv[1]
-                eps = mx.random_normal(loc=0, scale=1, shape=(batch_size, 4096), ctx=model_ctx)
-                z = mu + mx.exp(0.5*lv)*eps
+		KL = 0.5*nd.nansum(1+lv-mu*mu-nd.exp(lv+soft_zero))
+                eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 2048), ctx=ctx)
+		#KL = 0.5*nd.nansum(1+lv-mu*mu-nd.exp(lv+soft_zero))
+                z = mu + nd.exp(0.5*lv)*eps
+		z = nd.expand_dims(nd.expand_dims(z,2),2)
                 y = netDe(z)
                 fake_out = y
-                KL = 0.5*mx.sum(1+lv-mu*mu-mx.exp(lv),axis=1)
-                logloss = mx.sum(real_in*mx.log(y+self.soft_zero)+ (1-real_in)*mx.log(1-y+self.soft_zero), axis=1)
-                loss = -logloss-KL
-                #fake_out = netG(real_in)
+		logloss = nd.nansum((real_in+1)*0.5*nd.log(0.5*(y+1)+soft_zero)+ (1-0.5*(real_in+1))*nd.log(1-0.5*(y+1)+soft_zero))
+                loss =-logloss-KL
                 fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
-                errG = GAN_loss(output, real_label) + KL*lambda1 #L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output, real_label) + loss*lambda1 #L1_loss(real_out, fake_out) * lambda1
                 errR = logloss#L1_loss(real_out, fake_out)
                 errG.backward()
-	   
-        trainerG.step(batch.data[0].shape[0])
+        trainerDe.step(batch.data[0].shape[0])	   
+        trainerEn.step(batch.data[0].shape[0])
         loss_rec_G.append(nd.mean(errG).asscalar()-nd.mean(errR).asscalar()*lambda1)
         loss_rec_D.append(nd.mean(errD).asscalar())
         loss_rec_R.append(nd.mean(errR).asscalar())
@@ -178,10 +183,9 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, tr
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
-		        logging.info(
-                    'discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
-                    % (nd.mean(errD).asscalar(),
-                       nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
+		logging.info('discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
+                    	% (nd.mean(errD).asscalar(),
+                      	nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
         iter = iter + 1
         btic = time.time()
 
@@ -195,21 +199,34 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, tr
             text_file = open(expname + "_validtest.txt", "a")
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
-            filename = "checkpoints/"+expname+"_"+str(epoch)+"_G.params"
-            netG.save_params(filename)
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_En.params"
+            netEn.save_params(filename)
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_De.params"
+            netDe.save_params(filename)
             fake_img1 = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2 = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
             fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
             val_data.reset()
-           
-        for vbatch in val_data:
+            text_file = open(expname + "_validtest.txt", "a")
+            for vbatch in val_data:
                 
-            real_in = vbatch.data[0].as_in_context(ctx)
-            real_out = vbatch.data[1].as_in_context(ctx)
-            fake_out = netG(real_in)
-            metric2.update([fake_out, ], [real_out, ])
-            _, acc2 = metric2.get()
+            	real_in = vbatch.data[0].as_in_context(ctx)
+            	real_out = vbatch.data[1].as_in_context(ctx)
+
+            	fake_latent= netEn(real_in)
+            	mu_lv = nd.split(fake_latent, axis=1, num_outputs=2)
+            	mu = mu_lv[0]
+            	lv = mu_lv[1]
+            	eps = nd.random_normal(loc=0, scale=1, shape=(batch_size/5, 2048,1,1), ctx=ctx)
+            	z = mu + nd.exp(0.5*lv)*eps
+            	y = netDe(z)
+            	fake_out = y
+            	KL = 0.5*nd.sum(1+lv-mu*mu-nd.exp(lv),axis=1)
+            	logloss = nd.sum(real_in*nd.log(y+soft_zero)+ (1-real_in)*nd.log(1-y+soft_zero), axis=1)
+            	loss = logloss+KL
+            	metric2.update([fake_out, ], [real_out, ])
+            	_, acc2 = metric2.get()
             text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
             metric2.reset()
 
@@ -302,12 +319,12 @@ def main(opt):
 
         fake_img1 = nd.concat(real_in[0],real_out[0], out[0], outnn[0],dim=1)
         fake_img2 = nd.concat(real_in[1],real_out[1], out[1],outnn[1], dim=1)
-            fake_img3 = nd.concat(real_in[2],real_out[2], out[2], outnn[2], dim=1)
-            fake_img4 = nd.concat(real_in[3],real_out[3],out[3],outnn[3], dim=1)
-            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=2)
-            #print(np.shape(fake_img))
-       	    visual.visualize(fake_img)
-            plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
+        fake_img3 = nd.concat(real_in[2],real_out[2], out[2], outnn[2], dim=1)
+        fake_img4 = nd.concat(real_in[3],real_out[3],out[3],outnn[3], dim=1)
+        fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=2)
+        #print(np.shape(fake_img))
+       	visual.visualize(fake_img)
+        plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
 
 
         return ([0,0,0,0])

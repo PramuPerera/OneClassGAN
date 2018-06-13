@@ -369,7 +369,7 @@ class Decoder(HybridBlock):
             padding = 0 
 	    nf_mult = 2 ** n_layers
             self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=2,
-                                           padding=padding, in_channels=4096,
+                                           padding=padding, in_channels=2048,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
             #self.model.add(LeakyReLU(alpha=0.2))
