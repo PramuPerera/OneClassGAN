@@ -197,7 +197,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
-        if epoch%10 ==0:
+        if epoch%5  ==0:
 	    text_file = open(expname + "_validtest.txt", "a")
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
@@ -208,6 +208,13 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             fake_img3 = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
             fake_img4 = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
             val_data.reset()
+	    plt.gcf().clear()
+            plt.plot(loss_rec_D, label="D", alpha = 0.7)
+            plt.plot(loss_rec_G, label="G", alpha=0.7)
+            plt.plot(loss_rec_R, label="R", alpha= 0.7)
+            plt.plot(acc_rec, label="Acc", alpha = 0.7)
+            plt.legend()
+            plt.savefig('outputs/'+opt.expname+'_loss.png')
            
 	    for vbatch in val_data:
                 

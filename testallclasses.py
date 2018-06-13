@@ -15,9 +15,9 @@ text_file.close()
 #text_file.close()
 #folders = [i.split('\n', 1)[0] for i in folders]
 
-follist = range(0,201,10)
+follist = range(0,101,5)
 folders = range(0,10)
-for classname in folders:
+for classname in[0]:# folders:
         filelisttext = open(opt.dataset+'_trainlist.txt', 'w')
 	filelisttext.write(str(classname))
 	filelisttext.close()
@@ -31,7 +31,7 @@ for classname in folders:
         epoch = []
         trainerr = []
         valerr =[]
-	os.system('python2 cvpriter.py --epochs 201 --batch_size 16  --ndf 16 --ngf 64  --istest 0 --expname grapesip64 --img_wd 61  --img_ht 61  --depth 3  --datapath ../mnist_png/mnist_png/  --noisevar 0.2  --lambda1 500 --seed 1000 --append 0  --dataset Mnist')
+	os.system('python2 cvpriter.py --epochs 101  --batch_size 256  --ndf 8  --ngf 64  --istest 0 --expname grapesip64 --img_wd 61  --img_ht 61  --depth 3  --datapath ../mnist_png/mnist_png/  --noisevar 0.2  --lambda1 500 --seed 1000 --append 0  --dataset Mnist')
         res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()
@@ -45,8 +45,8 @@ for classname in folders:
             trainerr.append(temp[0])
             valerr.append(temp[1])
         print(valerr)
-        valep = np.argmin(np.array(valerr[5:len(valerr)]))
-        trainep = np.argmin(np.array(trainerr[5:len(trainerr)]))
+        valep = np.argmin(np.array(valerr[10:len(valerr)]))
+        trainep = np.argmin(np.array(trainerr[10:len(trainerr)]))
         print(valerr[valep])
         print(trainerr[trainep])
         opt.epochs =follist[ valep]
@@ -54,5 +54,5 @@ for classname in folders:
         opt.epochs = follist[trainep]
         roc_auctrain = ocgantestdisjoint.main(opt)
     	text_file = open(opt.dataset + "_progress.txt", "a")
-        text_file.write("%s %s %s %s %s %s\n" % (str(valerr[valep]), str(trainerr[trainep]), str(roc_aucval[0]),str(roc_auctrain[0]), str(roc_aucval[1]),str(roc_auctrain[1])))
+        text_file.write("%s %s %s %s %s %s\n" % (str(valerr[valep]), str(trainerr[trainep]), str(roc_aucval[0]),str(roc_auctrain[0]), str(roc_aucval[2]),str(roc_auctrain[2])))
         text_file.close()
