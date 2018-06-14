@@ -40,17 +40,12 @@ def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
             netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
     else:        
             netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
-    netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)
 
-    # Initialize parameters
-    models.network_init(netG, ctx=ctx)
-    models.network_init(netD, ctx=ctx)
 
-    # trainer for the generator and the discriminator
-    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-
-    return netG, netD, trainerG, trainerD
+    return netEn, netDe,  netD, netD2 
 
 def main(opt):
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
@@ -84,9 +79,11 @@ def main(opt):
     print('loading pictures')
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
     print('picture loading done')
-    netG, netD, trainerG, trainerD = set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
-    netG.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_G.params', ctx=ctx)
+    netEn,netDe, netD, netD2 = set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
+    netEn.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_En.params', ctx=ctx)
+    netDe.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_De.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
+    netD2.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D2.params', ctx=ctx)
     print('Model loading done')
     lbllist = [];
     scorelist1 = [];
@@ -101,17 +98,17 @@ def main(opt):
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
-        outnn = (netG(real_out))
+        outnn = (netDe(netEn((real_out))))
         out_concat =  nd.concat(real_out, outnn, dim=1) if opt.append else  outnn
         output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
-        out = (netG(real_in))
+        out = netDe(netEn(real_in))
         out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
         output = netD(out_concat) #Denoised image
         output3 = nd.mean(out-real_out, (1, 3, 2)).asnumpy() #denoised-real
         output = nd.mean(output, (1, 3, 2)).asnumpy()
         out_concat =  nd.concat(real_out, real_out, dim=1) if opt. append else  real_out
-        output2 = netD(out_concat) #Image with no noise
-        output2 = nd.mean(output2, (1, 3, 2)).asnumpy()
+        output2 = netD2(netEn(real_in)) #Image with no noise
+        output2 = nd.mean(output2, (1)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())
         scorelist1 = scorelist1+list(output)
         scorelist2 = scorelist2+list(output2)
@@ -126,7 +123,8 @@ def main(opt):
         #print(np.shape(fake_img))
         visual.visualize(fake_img)
         plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
-
+	print(np.shape(scorelist1))
+	print(np.shape(lbllist))
     if not opt.isvalidation:
 
 	

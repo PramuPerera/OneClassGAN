@@ -127,10 +127,11 @@ class LatentDiscriminator(HybridBlock):
         super(LatentDiscriminator, self).__init__()
 
         with self.name_scope():
-            self.model.add(dense(1024))
-            self.model.add(dense(256))
-            self.model.add(dense(64))
-            self.model.add(dense(16))            
+	    self.model = HybridSequential()
+            self.model.add(gluon.nn.Dense(1024))
+            self.model.add(gluon.nn.Dense(256))
+            self.model.add(gluon.nn.Dense(64))
+            self.model.add(gluon.nn.Dense(16))            
 
     def hybrid_forward(self, F, x):
         out = self.model(x)

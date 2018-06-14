@@ -160,7 +160,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 real_label = nd.ones(output.shape, ctx=ctx)
                 real_latelnt_label = nd.ones(output2.shape, ctx=ctx)
                 errG = GAN_loss(output2, real_latent_label)+GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
-                errR = logloss#L1_loss(real_out, fake_out)
+                errR = L1_loss(real_out, fake_out)
                 errG.backward()
         trainerDe.step(batch.data[0].shape[0])	   
         trainerEn.step(batch.data[0].shape[0])
@@ -190,6 +190,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             text_file = open(expname + "_validtest.txt", "a")
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
+            filename = "checkpoints/"+expname+"_"+str(epoch)+"_D2.params"
+            netD2.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_En.params"
             netEn.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_De.params"
@@ -206,16 +208,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             	real_out = vbatch.data[1].as_in_context(ctx)
 
             	fake_latent= netEn(real_in)
-            	mu_lv = nd.split(fake_latent, axis=1, num_outputs=2)
-            	mu = mu_lv[0]
-            	lv = mu_lv[1]
-            	eps = nd.random_normal(loc=0, scale=1, shape=(batch_size/5, 2048,1,1), ctx=ctx)
-            	z = mu + nd.exp(0.5*lv)*eps
-            	y = netDe(z)
+		y = netDe(fake_latent)
             	fake_out = y
-            	KL = 0.5*nd.sum(1+lv-mu*mu-nd.exp(lv),axis=1)
-            	logloss = nd.sum(real_in*nd.log(y+soft_zero)+ (1-real_in)*nd.log(1-y+soft_zero), axis=1)
-            	loss = logloss+KL
             	metric2.update([fake_out, ], [real_out, ])
             	_, acc2 = metric2.get()
             text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
