@@ -227,8 +227,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netG, netD, trainerG, t
             metric2.reset()
 
             fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
-            fake_img2T = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
-            fake_img3T = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
+            fake_img2T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
+            fake_img3T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             #fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
             fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img1T,fake_img2T, fake_img3T,dim=2)
             visual.visualize(fake_img)

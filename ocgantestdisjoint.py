@@ -37,9 +37,9 @@ def facc(label, pred):
 
 def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
     if append:
-            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
+            netD = models.Discriminator(in_channels=6, n_layers=2, istest=True, ndf=ndf)
     else:        
-            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
+            netD = models.Discriminator(in_channels=3, n_layers=2, istest=True, ndf=ndf)
     netG = models.CEGenerator(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     # Initialize parameters
@@ -97,7 +97,6 @@ def main(opt):
     count = 0
     for batch in (test_data):
         count+=1
-	print (str(count)) #, end="\r")
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
