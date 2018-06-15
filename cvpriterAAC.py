@@ -122,11 +122,12 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 # Use image pooling to utilize history imagesi
                 output = netD(fake_concat)
                 output2 = netD2(fake_latent)
+		eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096,1,1), ctx=ctx)
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
-                errD_fake = GAN_loss(output, fake_label)
+		rec_output = netD(netDe(eps))
+                errD_fake = GAN_loss(rec_output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
-                
                 metric.update([fake_label, ], [output, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
@@ -151,7 +152,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
             with autograd.record():
-
+		eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096,1,1), ctx=ctx)
+		rec_output = netD(netDe(eps))
                 fake_latent= (netEn(real_in))
                 output2 = netD2(fake_latent)
                 fake_out = netDe(fake_latent)
@@ -159,7 +161,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 real_latelnt_label = nd.ones(output2.shape, ctx=ctx)
-                errG = GAN_loss(output2, real_latent_label)+GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output2, real_latent_label)+GAN_loss(rec_output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
         trainerDe.step(batch.data[0].shape[0])	   
