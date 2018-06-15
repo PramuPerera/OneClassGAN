@@ -98,6 +98,8 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
     loss_rec_D = []
     loss_rec_R = []
     acc_rec = []
+    loss_rec_D2 = []
+
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
     for epoch in range(epochs):
@@ -122,11 +124,12 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 # Use image pooling to utilize history imagesi
                 output = netD(fake_concat)
                 output2 = netD2(fake_latent)
-		eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096,1,1), ctx=ctx)
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
+		eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096,1,1), ctx=ctx)
 		rec_output = netD(netDe(eps))
                 errD_fake = GAN_loss(rec_output, fake_label)
+	        errD_fake2 = GAN_loss(output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
                 metric.update([fake_label, ], [output, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
@@ -136,7 +139,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 real_latent_label =  nd.ones(output2.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
                 errD2_real =  GAN_loss(output2, real_latent_label)
-                errD = (errD_real + errD_fake) * 0.5
+                errD = (errD_real + 0.5*(errD_fake+errD_fake2)) * 0.5
                 errD2 = (errD2_real + errD2_fake) * 0.5
                 errD.backward()
                 errD2.backward()
@@ -147,7 +150,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 
 
             trainerD.step(batch.data[0].shape[0])
-
+	    trainerD2.step(batch.data[0].shape[0])
             ############################
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
@@ -161,7 +164,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 real_latelnt_label = nd.ones(output2.shape, ctx=ctx)
-                errG = GAN_loss(output2, real_latent_label)+GAN_loss(rec_output, real_label) + L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output2, real_latent_label)+0.5*(GAN_loss(rec_output, real_label) +GAN_loss(output, real_label) )+ L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
         trainerDe.step(batch.data[0].shape[0])	   
@@ -169,15 +172,16 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         loss_rec_G.append(nd.mean(errG).asscalar()-nd.mean(errR).asscalar()*lambda1)
         loss_rec_D.append(nd.mean(errD).asscalar())
         loss_rec_R.append(nd.mean(errR).asscalar())
-        name, acc = metric.get()
+        loss_rec_D2.append(nd.mean(errD2).asscalar())
+	name, acc = metric.get()
         acc_rec.append(acc)
         # Print log infomation every ten batches
         if iter % 10 == 0:
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
-		logging.info('discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
-                    	% (nd.mean(errD).asscalar(),
+		logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
+                    	% (nd.mean(errD).asscalar(),nd.mean(errD2).asscalar(),
                       	nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
         iter = iter + 1
         btic = time.time()
@@ -225,7 +229,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
             text_file.close()
-    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec])
+    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec, loss_rec_D2])
 
 
 def print_result():
@@ -262,7 +266,8 @@ def main(opt):
         print(opt.epochs)
         loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
         plt.gcf().clear()
-        plt.plot(loss_vec[0], label="D", alpha = 0.7)
+        plt.plot(loss_vec[0], label="Dr", alpha = 0.7)
+        plt.plot(loss_vec[4], label="Dl", alpha = 0.7)
         plt.plot(loss_vec[1], label="G", alpha=0.7)
         plt.plot(loss_vec[2], label="R", alpha= 0.7)
         plt.plot(loss_vec[3], label="Acc", alpha = 0.7)
