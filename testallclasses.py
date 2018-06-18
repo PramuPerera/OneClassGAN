@@ -31,7 +31,7 @@ for classname in [0]:#folders:
         epoch = []
         trainerr = []
         valerr =[]
-        #os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname grapesip64 --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/ --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset Mnist --latent '+str(opt.latent))
+        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname grapesip64 --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/ --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset Mnist --latent '+str(opt.latent))
 	res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()

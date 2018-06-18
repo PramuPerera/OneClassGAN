@@ -135,7 +135,7 @@ class LatentDiscriminator(HybridBlock):
 	    self.model.add(gluon.nn.Dense(32))
        	    self.model.add(Activation(activation='relu'))
 	    self.model.add(gluon.nn.Dense(16))    
-	    self.model.add(Activation(activation='relu'))        
+	    self.model.add(Activation(activation='sigmoid'))        
     def hybrid_forward(self, F, x):
         out = self.model(x)
         #print(np.shape(out))

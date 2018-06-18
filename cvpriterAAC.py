@@ -70,7 +70,6 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
     metric2 = mx.metric.CustomMetric(facc)
-    metric2 = mx.metric.MSE()
     loss_rec_G = []
     loss_rec_D = []
     loss_rec_R = []
@@ -158,13 +157,13 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         loss_rec_D.append(nd.mean(errD).asscalar())
         loss_rec_R.append(nd.mean(errR).asscalar())
         loss_rec_D2.append(nd.mean(errD2).asscalar())
-	tp_file = open(expname + "_trainloss.txt", "a")
-  	tp_file.write(str(loss_rec_G2)+" "+str(loss_rec_G)+" "+str(loss_rec_D)+" "+str(loss_rec_D2)+" "+str(loss_rec_R))
- 	tp_file.close()
 	_, acc2 = metric2.get()
 	name, acc = metric.get()
         acc_rec.append(acc)
 	acc2_rec.append(acc2)
+	tp_file = open(expname + "_trainloss.txt", "a")
+        tp_file.write(str(nd.mean(errG2).asscalar())+" "+str(nd.mean(nd.mean(errG)).asscalar()-nd.mean(errG2).asscalar()-nd.mean(errR).asscalar() )+" "+str(nd.mean(errD).asscalar())+" "+str(nd.mean(errD2).asscalar())+" "+str(acc )+ " "+str(acc2))
+        tp_file.close()
         # Print log infomation every ten batches
         if iter % 10 == 0:
 		_, acc2 = metric2.get()
