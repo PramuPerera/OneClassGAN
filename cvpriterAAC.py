@@ -35,12 +35,12 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf,latent, append=True, solver='ada
         netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     else:
-    	netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
-      	netD2 = models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
-    	#netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    	#netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
-    	netEn = models.Encoder(in_channels=3, n_layers =depth,latent=latent, ndf=ngf)
-    	netDe = models.Decoder(in_channels=3, n_layers =depth, latent=latent, ndf=ngf)
+        netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
+        netD2 = models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
+        #netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+        #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
+        netEn = models.Encoder(in_channels=3, n_layers =depth,latent=latent, ndf=ngf)
+        netDe = models.Decoder(in_channels=3, n_layers =depth, latent=latent, ndf=ngf)
 
     # Initialize parameters
     models.network_init(netEn, ctx=ctx)
@@ -87,7 +87,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         train_data.reset()
         iter = 0
         #print('learning rate : '+str(trainerD.learning_rate ))
-	for batch in train_data:
+        for batch in train_data:
             ############################
             # (1) Update D network: maximize log(D(x, y)) + log(1 - D(x, G(x, z)))
             ###########################
@@ -104,10 +104,10 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 output2 = netD2(fake_latent)
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
-		eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
-		rec_output = netD(netDe(eps))
+                eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
+                rec_output = netD(netDe(eps))
                 errD_fake = GAN_loss(rec_output, fake_label)
-	        errD_fake2 = GAN_loss(output, fake_label)
+                errD_fake2 = GAN_loss(output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
                 metric.update([fake_label, ], [output, ])
                 metric2.update([fake_label, ], [rec_output, ])
@@ -120,65 +120,64 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 errD2_real =  GAN_loss(output2, real_latent_label)
                 #errD = (errD_real + 0.5*(errD_fake+errD_fake2)) * 0.5
                 errD = (errD_real + errD_fake) * 0.5
-		errD2 = (errD2_real + errD2_fake) * 0.5
+                errD2 = (errD2_real + errD2_fake) * 0.5
                 errD.backward()
                 errD2.backward()
                 metric.update([real_label, ], [output, ])
-		metric2.update([real_label, ], [rec_output, ])
-
-
-
-                
-
+            metric2.update([real_label, ], [rec_output, ])
             trainerD.step(batch.data[0].shape[0])
-	    trainerD2.step(batch.data[0].shape[0])
+            trainerD2.step(batch.data[0].shape[0])
             ############################
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
             with autograd.record():
-		eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
-		rec_output = netD(netDe(eps))
+                eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
+                rec_output = netD(netDe(eps))
                 fake_latent= (netEn(real_in))
                 output2 = netD2(fake_latent)
                 fake_out = netDe(fake_latent)
                 fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
-                real_latelnt_label = nd.ones(output2.shape, ctx=ctx)
-		errG2 = GAN_loss(rec_output, real_label)
-	        errR = L1_loss(real_out, fake_out) * lambda1
+                real_latent_label = nd.ones(output2.shape, ctx=ctx)
+                errG2 = GAN_loss(rec_output, real_label)
+                errR = L1_loss(real_out, fake_out) * lambda1
                 errG = GAN_loss(output2, real_latent_label)+errG2+errR
                 errG.backward()
+            trainerDe.step(batch.data[0].shape[0])
+            trainerEn.step(batch.data[0].shape[0])
+            loss_rec_G2.append(nd.mean(errG2).asscalar())
+            loss_rec_G.append(nd.mean(nd.mean(errG)).asscalar()-nd.mean(errG2).asscalar()-nd.mean(errR).asscalar())
+            loss_rec_D.append(nd.mean(errD).asscalar())
+            loss_rec_R.append(nd.mean(errR).asscalar())
+            loss_rec_D2.append(nd.mean(errD2).asscalar())
+            _, acc2 = metric2.get()
+            name, acc = metric.get()
+            acc_rec.append(acc)
+            acc2_rec.append(acc2)
 
-        trainerDe.step(batch.data[0].shape[0])	   
-        trainerEn.step(batch.data[0].shape[0])
-	loss_rec_G2.append(nd.mean(errG2).asscalar())
-        loss_rec_G.append(nd.mean(nd.mean(errG)).asscalar()-nd.mean(errG2).asscalar()-nd.mean(errR).asscalar())
-        loss_rec_D.append(nd.mean(errD).asscalar())
-        loss_rec_R.append(nd.mean(errR).asscalar())
-        loss_rec_D2.append(nd.mean(errD2).asscalar())
-	_, acc2 = metric2.get()
-	name, acc = metric.get()
-        acc_rec.append(acc)
-	acc2_rec.append(acc2)
-	tp_file = open(expname + "_trainloss.txt", "a")
-        tp_file.write(str(nd.mean(errG2).asscalar())+" "+str(nd.mean(nd.mean(errG)).asscalar()-nd.mean(errG2).asscalar()-nd.mean(errR).asscalar() )+" "+str(nd.mean(errD).asscalar())+" "+str(nd.mean(errD2).asscalar())+" "+str(acc )+ " "+str(acc2))
-        tp_file.close()
-        # Print log infomation every ten batches
-        if iter % 10 == 0:
-		_, acc2 = metric2.get()
+            # Print log infomation every ten batches
+            if iter % 10 == 0:
+                _, acc2 = metric2.get()
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
-		logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, G2 loss = %f,  binary training acc = %f reconstruction error= %f  D2 acc = %f at iter %d epoch %d'
+		        logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, G2 loss = %f,  binary training acc = %f reconstruction error= %f  D2 acc = %f at iter %d epoch %d'
                     	% (nd.mean(errD).asscalar(),nd.mean(errD2).asscalar(),
                       	nd.mean(errG-errG2-errR).asscalar(),nd.mean(errG2).asscalar(), acc,acc2,nd.mean(errR).asscalar() ,iter, epoch))
-        iter = iter + 1
+                iter = iter + 1
         btic = time.time()
-	name, acc = metric.get() 
+        name, acc = metric.get()
+        _, acc2 = metric2.get()
+        tp_file = open(expname + "_trainloss.txt", "a")
+        tp_file.write(str(nd.mean(errG2).asscalar()) + " " + str(
+            nd.mean(nd.mean(errG)).asscalar() - nd.mean(errG2).asscalar() - nd.mean(errR).asscalar()) + " " + str(
+            nd.mean(errD).asscalar()) + " " + str(nd.mean(errD2).asscalar()) + " " + str(acc) + " " + str(acc2))
+        tp_file.close()
         metric.reset()
-	metric2.reset()
+        metric2.reset()
         train_data.reset()
+
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
@@ -200,14 +199,13 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             text_file = open(expname + "_validtest.txt", "a")
             for vbatch in val_data:
                 
-            	real_in = vbatch.data[0].as_in_context(ctx)
-            	real_out = vbatch.data[1].as_in_context(ctx)
-
-            	fake_latent= netEn(real_in)
-		y = netDe(fake_latent)
-            	fake_out = y
-            	metric2.update([fake_out, ], [real_out, ])
-            	_, acc2 = metric2.get()
+                real_in = vbatch.data[0].as_in_context(ctx)
+                real_out = vbatch.data[1].as_in_context(ctx)
+                fake_latent= netEn(real_in)
+                y = netDe(fake_latent)
+                fake_out = y
+                metric2.update([fake_out, ], [real_out, ])
+                _, acc2 = metric2.get()
             text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
             metric2.reset()
 
