@@ -51,7 +51,7 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf,latent, append=True, solver='ada
     trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerD2 = gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    trainerD2 = gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate':2.0* lr, 'beta1': beta1})
     return netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2
 
 def facc(label, pred):
@@ -70,6 +70,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
     metric2 = mx.metric.CustomMetric(facc)
+    metricMSE = mx.metric.MSE()
     loss_rec_G = []
     loss_rec_D = []
     loss_rec_R = []
@@ -124,7 +125,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 errD.backward()
                 errD2.backward()
                 metric.update([real_label, ], [output, ])
-            metric2.update([real_label, ], [rec_output, ])
+            	metric2.update([real_label, ], [rec_output, ])
             trainerD.step(batch.data[0].shape[0])
             trainerD2.step(batch.data[0].shape[0])
             ############################
@@ -162,7 +163,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
-		        logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, G2 loss = %f,  binary training acc = %f reconstruction error= %f  D2 acc = %f at iter %d epoch %d'
+		logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, G2 loss = %f,  binary training acc = %f , D2 acc = %f, reconstruction error= %f  at iter %d epoch %d'
                     	% (nd.mean(errD).asscalar(),nd.mean(errD2).asscalar(),
                       	nd.mean(errG-errG2-errR).asscalar(),nd.mean(errG2).asscalar(), acc,acc2,nd.mean(errR).asscalar() ,iter, epoch))
                 iter = iter + 1
@@ -172,7 +173,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         tp_file = open(expname + "_trainloss.txt", "a")
         tp_file.write(str(nd.mean(errG2).asscalar()) + " " + str(
             nd.mean(nd.mean(errG)).asscalar() - nd.mean(errG2).asscalar() - nd.mean(errR).asscalar()) + " " + str(
-            nd.mean(errD).asscalar()) + " " + str(nd.mean(errD2).asscalar()) + " " + str(acc) + " " + str(acc2))
+            nd.mean(errD).asscalar()) + " " + str(nd.mean(errD2).asscalar()) + " " + nd.mean(errR).asscalar() +" "+str(acc) + " " + str(acc2)+"\n")
         tp_file.close()
         metric.reset()
         metric2.reset()
@@ -204,10 +205,10 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 fake_latent= netEn(real_in)
                 y = netDe(fake_latent)
                 fake_out = y
-                metric2.update([fake_out, ], [real_out, ])
-                _, acc2 = metric2.get()
+                metricMSE.update([fake_out, ], [real_out, ])
+                _, acc2 = metricMSE.get()
             text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
-            metric2.reset()
+            metricMSE.reset()
 
             fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
             fake_img2T = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
