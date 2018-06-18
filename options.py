@@ -28,6 +28,7 @@ def train_options():
     parser.add_argument("--classes", default="", help="Name of training class. Keep blank for random")
     parser.add_argument("--usegan", default=1, type=int,  help="set 1 for use gan loss.")
     parser.add_argument("--useAE", default=0, type=int,  help="set 1 for use AE.")
+    parser.add_argument("--latent", default=4096, type=int,  help="Dimension of the latent space.")
 
     args = parser.parse_args()
     if args.use_gpu == 1:
@@ -69,6 +70,7 @@ def test_options():
     parser.add_argument("--datapath", default='/users/pramudi/Documents/data/', help="Data path")
     parser.add_argument("--img_wd", default=256, type=int, help="Image width")
     parser.add_argument("--img_ht", default=256, type=int, help="Image height")
+    parser.add_argument("--latent", default=4096, type=int,  help="Dimension of the latent space.")
     parser.add_argument("--depth", default=4, type=int, help="Number of core layers in Generator/Discriminator")
     parser.add_argument("--noisevar", default=0.02, type=float, help="variance of noise added to input")
     parser.add_argument("--istest", default=1, type=float, help="if test set 1, otherwise validation")

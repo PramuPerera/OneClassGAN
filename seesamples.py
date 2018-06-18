@@ -34,7 +34,7 @@ for classname in [8,9]: #folders:
         netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
         netD2.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D2.params', ctx=ctx)
 
-        fakecode = nd.random_normal(loc=0, scale=1, shape=(16, 4096,1,1), ctx=ctx)
+        fakecode = nd.random_normal(loc=0, scale=1, shape=(16, 256,1,1), ctx=ctx)
         out = netDe(fakecode)
         fake_img1 = nd.concat(out[0],out[1], out[2], out[3],dim=1)
         fake_img2 = nd.concat(out[7],out[6], out[5], out[4],dim=1)

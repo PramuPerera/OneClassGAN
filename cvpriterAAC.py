@@ -28,32 +28,7 @@ import options
 #logging.basicConfig()
 
 
-def set_test_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
-    if append:
-            netD = models.Discriminator(in_channels=6, n_layers=3, istest=True, ndf=ndf)
-    else:   
-            netD = models.Discriminator(in_channels=3, n_layers=3, istest=True, ndf=ndf)
-    netG = models.CEGeneratorP(in_channels=3, numdowns=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-
-    # Initialize parameters
-    models.network_init(netG, ctx=ctx)
-    models.network_init(netD, ctx=ctx)
-
-    # trainer for the generator and the discriminator
-    trainerG = gluon.Trainer(netG.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-
-    return netG, netD, trainerG, trainerD
-
-
-
-
-
-
-
-
-
-def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
+def set_network(depth, ctx, lr, beta1, ndf, ngf,latent, append=True, solver='adam'):
     # Pixel2pixel networks
     if append:
         netD = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
@@ -64,8 +39,8 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf, append=True, solver='adam'):
       	netD2 = models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
     	#netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     	#netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
-    	netEn = models.Encoder(in_channels=3, n_layers =depth, ndf=ngf)
-    	netDe = models.Decoder(in_channels=3, n_layers =depth, ndf=ngf)
+    	netEn = models.Encoder(in_channels=3, n_layers =depth,latent=latent, ndf=ngf)
+    	netDe = models.Decoder(in_channels=3, n_layers =depth, latent=latent, ndf=ngf)
 
     # Initialize parameters
     models.network_init(netEn, ctx=ctx)
@@ -84,7 +59,7 @@ def facc(label, pred):
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
-def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname, append=True, useAE = False):
+def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname,  append=True, useAE = False):
     tp_file = open(expname + "_trainloss.txt", "w")  
     tp_file.close()  
     text_file = open(expname + "_validtest.txt", "w")
@@ -94,11 +69,13 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
     L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
+    metric2 = mx.metric.CustomMetric(facc)
     metric2 = mx.metric.MSE()
     loss_rec_G = []
     loss_rec_D = []
     loss_rec_R = []
     acc_rec = []
+    acc2_rec = []
     loss_rec_D2 = []
     loss_rec_G2 = []
 
@@ -128,12 +105,13 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 output2 = netD2(fake_latent)
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
-		eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096,1,1), ctx=ctx)
+		eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
 		rec_output = netD(netDe(eps))
                 errD_fake = GAN_loss(rec_output, fake_label)
 	        errD_fake2 = GAN_loss(output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
                 metric.update([fake_label, ], [output, ])
+                metric2.update([fake_label, ], [rec_output, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
                 output2 = netD2(real_latent)
@@ -147,6 +125,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 errD.backward()
                 errD2.backward()
                 metric.update([real_label, ], [output, ])
+		metric2.update([real_label, ], [rec_output, ])
 
 
 
@@ -158,7 +137,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
             with autograd.record():
-		eps = nd.random_normal(loc=0, scale=1, shape=(batch_size, 4096,1,1), ctx=ctx)
+		eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
 		rec_output = netD(netDe(eps))
                 fake_latent= (netEn(real_in))
                 output2 = netD2(fake_latent)
@@ -182,21 +161,24 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
 	tp_file = open(expname + "_trainloss.txt", "a")
   	tp_file.write(str(loss_rec_G2)+" "+str(loss_rec_G)+" "+str(loss_rec_D)+" "+str(loss_rec_D2)+" "+str(loss_rec_R))
  	tp_file.close()
+	_, acc2 = metric2.get()
 	name, acc = metric.get()
         acc_rec.append(acc)
+	acc2_rec.append(acc2)
         # Print log infomation every ten batches
         if iter % 10 == 0:
+		_, acc2 = metric2.get()
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
-		logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
+		logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, G2 loss = %f,  binary training acc = %f reconstruction error= %f  D2 acc = %f at iter %d epoch %d'
                     	% (nd.mean(errD).asscalar(),nd.mean(errD2).asscalar(),
-                      	nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
+                      	nd.mean(errG-errG2-errR).asscalar(),nd.mean(errG2).asscalar(), acc,acc2,nd.mean(errR).asscalar() ,iter, epoch))
         iter = iter + 1
         btic = time.time()
-
-        name, acc = metric.get()
+	name, acc = metric.get() 
         metric.reset()
+	metric2.reset()
         train_data.reset()
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
@@ -238,7 +220,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
             text_file.close()
-    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec, loss_rec_D2])
+    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec, loss_rec_D2, loss_rec_G2, acc2_rec])
 
 
 def print_result():
@@ -268,7 +250,7 @@ def main(opt):
     if opt.istest:
         print('testing not implemented')
     else:
-        netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2 = set_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
+        netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2 = set_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf,opt.latent, opt.append)
         if opt.graphvis:
             print(netG)
         print('training')
@@ -277,9 +259,11 @@ def main(opt):
         plt.gcf().clear()
         plt.plot(loss_vec[0], label="Dr", alpha = 0.7)
         plt.plot(loss_vec[4], label="Dl", alpha = 0.7)
-        plt.plot(loss_vec[1], label="G", alpha=0.7)
+        plt.plot(loss_vec[1], label="Gr", alpha=0.7)
+        plt.plot(loss_vec[5], label="Gl", alpha=0.7)
         plt.plot(loss_vec[2], label="R", alpha= 0.7)
-        plt.plot(loss_vec[3], label="Acc", alpha = 0.7)
+        plt.plot(loss_vec[3], label="Accr", alpha = 0.7)
+	plt.plot(loss_vec[6], label="Accl", alpha = 0.7)
         plt.legend()
         plt.savefig('outputs/'+opt.expname+'_loss.png')
         return inclasses

@@ -128,11 +128,11 @@ class LatentDiscriminator(HybridBlock):
 
         with self.name_scope():
 	    self.model = HybridSequential()
-            self.model.add(gluon.nn.Dense(1024))
+            self.model.add(gluon.nn.Dense(128))
 	    self.model.add(Activation(activation='relu'))
-            self.model.add(gluon.nn.Dense(256))
+            self.model.add(gluon.nn.Dense(64))
             self.model.add(Activation(activation='relu'))
-	    self.model.add(gluon.nn.Dense(64))
+	    self.model.add(gluon.nn.Dense(32))
        	    self.model.add(Activation(activation='relu'))
 	    self.model.add(gluon.nn.Dense(16))    
 	    self.model.add(Activation(activation='relu'))        
@@ -338,7 +338,7 @@ class CEGeneratorP(HybridBlock):
 
 
 class Encoder(HybridBlock):
-    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, usetanh = False ):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False,latent=256, usetanh = False ):
             super(Encoder, self).__init__()
             self.model = HybridSequential()
             kernel_size = 5
@@ -361,10 +361,10 @@ class Encoder(HybridBlock):
 
             nf_mult_prev = nf_mult
             nf_mult = 2 ** n_layers
-            self.model.add(Conv2D(channels=4096, kernel_size=kernel_size, strides=2,
+            self.model.add(Conv2D(channels=latent, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
-            #self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
+            #self.model.add(BatchNorm(momentum=0.1, in_channels =latent, use_global_stats=istest))
             if usetanh:
                 self.model.add(Activation(activation='tanh'))
             else:
@@ -383,14 +383,14 @@ class Encoder(HybridBlock):
 
 
 class Decoder(HybridBlock):
-    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, usetanh = False ):
+    def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False, latent=256, usetanh = False ):
             super(Decoder, self).__init__()
             self.model = HybridSequential()
             kernel_size = 5
             padding = 0 
 	    nf_mult = 2 ** n_layers
             self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=2,
-                                           padding=padding, in_channels=4096,
+                                           padding=padding, in_channels=latent,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
             #self.model.add(LeakyReLU(alpha=0.2))
