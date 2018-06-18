@@ -139,7 +139,16 @@ def main(opt):
 	    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
     else:
 	    return([0,0,0,0])
-
+    fakecode = nd.random_normal(loc=0, scale=1, shape=(16, 4096,1,1), ctx=ctx)
+    out = netDe(fakecode)
+    fake_img1 = nd.concat(out[0],out[1], out[2], out[3],dim=1)
+    fake_img2 = nd.concat(out[7],out[6], out[5], out[4],dim=1)
+    fake_img3 = nd.concat(out[8],out[9], out[10], out[11],dim=1)
+    fake_img4 = nd.concat(out[15],out[14], out[13], out[12],dim=1)
+    fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img4, dim=2)
+    #print(np.shape(fake_img))
+    visual.visualize(fake_img)
+    plt.savefig('outputs/fakes_'+opt.expname+'_.png')
 
 if __name__ == "__main__":
     opt = options.test_options()

@@ -129,10 +129,13 @@ class LatentDiscriminator(HybridBlock):
         with self.name_scope():
 	    self.model = HybridSequential()
             self.model.add(gluon.nn.Dense(1024))
+	    self.model.add(Activation(activation='relu'))
             self.model.add(gluon.nn.Dense(256))
-            self.model.add(gluon.nn.Dense(64))
-            self.model.add(gluon.nn.Dense(16))            
-
+            self.model.add(Activation(activation='relu'))
+	    self.model.add(gluon.nn.Dense(64))
+       	    self.model.add(Activation(activation='relu'))
+	    self.model.add(gluon.nn.Dense(16))    
+	    self.model.add(Activation(activation='relu'))        
     def hybrid_forward(self, F, x):
         out = self.model(x)
         #print(np.shape(out))

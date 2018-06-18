@@ -85,7 +85,8 @@ def facc(label, pred):
     return ((pred > 0.5) == label).mean()
 
 def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname, append=True, useAE = False):
-    
+    tp_file = open(expname + "_trainloss.txt", "w")  
+    tp_file.close()  
     text_file = open(expname + "_validtest.txt", "w")
     text_file.close()
     #netGT, netDT, _, _ = set_test_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf, opt.append)
@@ -99,6 +100,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
     loss_rec_R = []
     acc_rec = []
     loss_rec_D2 = []
+    loss_rec_G2 = []
 
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
@@ -139,8 +141,9 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 real_latent_label =  nd.ones(output2.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
                 errD2_real =  GAN_loss(output2, real_latent_label)
-                errD = (errD_real + 0.5*(errD_fake+errD_fake2)) * 0.5
-                errD2 = (errD2_real + errD2_fake) * 0.5
+                #errD = (errD_real + 0.5*(errD_fake+errD_fake2)) * 0.5
+                errD = (errD_real + errD_fake) * 0.5
+		errD2 = (errD2_real + errD2_fake) * 0.5
                 errD.backward()
                 errD2.backward()
                 metric.update([real_label, ], [output, ])
@@ -164,15 +167,21 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 real_latelnt_label = nd.ones(output2.shape, ctx=ctx)
-                errG = GAN_loss(output2, real_latent_label)+0.5*(GAN_loss(rec_output, real_label) +GAN_loss(output, real_label) )+ L1_loss(real_out, fake_out) * lambda1
-                errR = L1_loss(real_out, fake_out)
+		errG2 = GAN_loss(rec_output, real_label)
+	        errR = L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output2, real_latent_label)+errG2+errR
                 errG.backward()
+
         trainerDe.step(batch.data[0].shape[0])	   
         trainerEn.step(batch.data[0].shape[0])
-        loss_rec_G.append(nd.mean(errG).asscalar()-nd.mean(errR).asscalar()*lambda1)
+	loss_rec_G2.append(nd.mean(errG2).asscalar())
+        loss_rec_G.append(nd.mean(nd.mean(errG)).asscalar()-nd.mean(errG2).asscalar()-nd.mean(errR).asscalar())
         loss_rec_D.append(nd.mean(errD).asscalar())
         loss_rec_R.append(nd.mean(errR).asscalar())
         loss_rec_D2.append(nd.mean(errD2).asscalar())
+	tp_file = open(expname + "_trainloss.txt", "a")
+  	tp_file.write(str(loss_rec_G2)+" "+str(loss_rec_G)+" "+str(loss_rec_D)+" "+str(loss_rec_D2)+" "+str(loss_rec_R))
+ 	tp_file.close()
 	name, acc = metric.get()
         acc_rec.append(acc)
         # Print log infomation every ten batches
