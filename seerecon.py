@@ -21,7 +21,7 @@ text_file.close()
 
 follist = range(0,201,10)
 folders = range(0,10)
-for classname in [8,9]: #folders:
+for classname in [0]: #folders:
         filelisttext = open(opt.dataset+'_trainlist.txt', 'w')
 	filelisttext.write(str(classname))
 	filelisttext.close()
