@@ -93,11 +93,15 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
     L1_loss = gluon.loss.L2Loss()
     image_pool = imagePool.ImagePool(pool_size)
     metric = mx.metric.CustomMetric(facc)
+    metricl = mx.metric.CustomMetric(facc)
     metric2 = mx.metric.MSE()
     loss_rec_G = []
     loss_rec_D = []
     loss_rec_R = []
+    loss_rec_D2 = []
+
     acc_rec = []
+    acc2_rec = []
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
     for epoch in range(epochs):
@@ -126,7 +130,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
                 errD_fake = GAN_loss(output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
-                
+           	metricl.update([fake_latent_label, ], [output2, ])     
                 metric.update([fake_label, ], [output, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
@@ -140,11 +144,12 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 errD.backward()
                 errD2.backward()
                 metric.update([real_label, ], [output, ])
+		metricl.update([real_latent_label, ], [output2, ])
 
 
 
                 
-
+	    trainerD2.step(batch.data[0].shape[0])
             trainerD.step(batch.data[0].shape[0])
 
             ############################
@@ -166,22 +171,27 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         trainerEn.step(batch.data[0].shape[0])
         loss_rec_G.append(nd.mean(errG).asscalar()-nd.mean(errR).asscalar()*lambda1)
         loss_rec_D.append(nd.mean(errD).asscalar())
+	loss_rec_D2.append(nd.mean(errD2).asscalar())
         loss_rec_R.append(nd.mean(errR).asscalar())
         name, acc = metric.get()
+        _, acc2 = metricl.get()
         acc_rec.append(acc)
+	acc2_rec.append(acc2)  
         # Print log infomation every ten batches
         if iter % 10 == 0:
+		_, acc2 = metricl.get()
                 name, acc = metric.get()
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
-		logging.info('discriminator loss = %f, generator loss = %f, binary training acc = %f reconstruction error= %f at iter %d epoch %d'
+		logging.info('discriminator loss = %f, generator loss = %f, binary training acc = %f, acc2 = %f, reconstruction error= %f at iter %d epoch %d'
                     	% (nd.mean(errD).asscalar(),
-                      	nd.mean(errG).asscalar(), acc,nd.mean(errR).asscalar() ,iter, epoch))
+                      	nd.mean(errG).asscalar(), acc,acc2,nd.mean(errR).asscalar() ,iter, epoch))
         iter = iter + 1
         btic = time.time()
 
         name, acc = metric.get()
         metric.reset()
+	metricl.reset()  
         train_data.reset()
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
@@ -223,7 +233,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
             text_file.close()
-    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec])
+    return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec, acc2_rec, loss_rec_D2])
 
 
 def print_result():
@@ -264,7 +274,9 @@ def main(opt):
         plt.plot(loss_vec[1], label="G", alpha=0.7)
         plt.plot(loss_vec[2], label="R", alpha= 0.7)
         plt.plot(loss_vec[3], label="Acc", alpha = 0.7)
-        plt.legend()
+    	plt.plot(loss_vec[4], label="Acc-latent", alpha = 0.7)
+        plt.plot(loss_vec[5], label="D-latent", alpha = 0.7)
+	plt.legend()
         plt.savefig('outputs/'+opt.expname+'_loss.png')
         return inclasses
 
