@@ -141,7 +141,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 errD2_real =  GAN_loss(output2, real_latent_label)
                 errD = (errD_real + errD_fake) * 0.5
                 errD2 = (errD2_real + errD2_fake) * 0.5
-                errD.backward()
+                #errD.backward()
                 errD2.backward()
                 metric.update([real_label, ], [output, ])
 		metricl.update([real_latent_label, ], [output2, ])
@@ -150,7 +150,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
 
                 
 	    trainerD2.step(batch.data[0].shape[0])
-            trainerD.step(batch.data[0].shape[0])
+            #trainerD.step(batch.data[0].shape[0])
 
             ############################
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
@@ -164,8 +164,9 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
                 real_latelnt_label = nd.ones(output2.shape, ctx=ctx)
-                errG = GAN_loss(output2, real_latent_label)+GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
-                errR = L1_loss(real_out, fake_out)
+                #errG = GAN_loss(output2, real_latent_label)+GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output2, real_latent_label)+  L1_loss(real_out, fake_out) * lambda1
+		errR = L1_loss(real_out, fake_out)
                 errG.backward()
         trainerDe.step(batch.data[0].shape[0])	   
         trainerEn.step(batch.data[0].shape[0])

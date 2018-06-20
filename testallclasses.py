@@ -17,7 +17,7 @@ text_file.close()
 
 follist = range(0,201,10)
 folders = range(0,10)
-for classname in [0]:#folders:
+for classname in [0]:# folders:
         filelisttext = open(opt.dataset+'_trainlist.txt', 'w')
 	filelisttext.write(str(classname))
 	filelisttext.close()
@@ -31,7 +31,7 @@ for classname in [0]:#folders:
         epoch = []
         trainerr = []
         valerr =[]
-        #os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname grapesip64 --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/ --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset Mnist')
+        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname grapesip64 --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/ --noisevar 0.0 --lambda1 10 --seed 1000 --append 0 --dataset Mnist')
 	res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()

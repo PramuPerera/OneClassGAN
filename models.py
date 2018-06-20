@@ -128,10 +128,13 @@ class LatentDiscriminator(HybridBlock):
 
         with self.name_scope():
 	    self.model = HybridSequential()
-            self.model.add(gluon.nn.Dense(1024))
-            self.model.add(gluon.nn.Dense(256))
-            self.model.add(gluon.nn.Dense(64))
-            self.model.add(gluon.nn.Dense(16))            
+            #self.model.add(gluon.nn.Dense(1000))
+	    #self.model.add(Activation(activation = 'relu'))
+            self.model.add(gluon.nn.Dense(10))
+            self.model.add(Activation(activation = 'relu'))
+            #self.model.add(gluon.nn.Dense(64))
+            self.model.add(gluon.nn.Dense(1))            
+            self.model.add(Activation(activation = 'sigmoid'))
 
     def hybrid_forward(self, F, x):
         out = self.model(x)
@@ -358,7 +361,7 @@ class Encoder(HybridBlock):
 
             nf_mult_prev = nf_mult
             nf_mult = 2 ** n_layers
-            self.model.add(Conv2D(channels=4096, kernel_size=kernel_size, strides=2,
+            self.model.add(Conv2D(channels=15, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
             #self.model.add(BatchNorm(momentum=0.1, in_channels =128, use_global_stats=istest))
@@ -387,7 +390,7 @@ class Decoder(HybridBlock):
             padding = 0 
 	    nf_mult = 2 ** n_layers
             self.model.add(Conv2DTranspose(channels=ndf * nf_mult/2, kernel_size=kernel_size, strides=2,
-                                           padding=padding, in_channels=4096,
+                                           padding=padding, in_channels=15,
                                            use_bias=use_bias))
             self.model.add(BatchNorm(momentum=0.1, in_channels=ndf * nf_mult / 2, use_global_stats=istest))
             #self.model.add(LeakyReLU(alpha=0.2))
