@@ -40,8 +40,8 @@ def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
             netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
     else:        
             netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
-    netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, latent=4096,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, latent=4096,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)
 
 

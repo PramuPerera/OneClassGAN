@@ -173,12 +173,11 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         tp_file = open(expname + "_trainloss.txt", "a")
         tp_file.write(str(nd.mean(errG2).asscalar()) + " " + str(
             nd.mean(nd.mean(errG)).asscalar() - nd.mean(errG2).asscalar() - nd.mean(errR).asscalar()) + " " + str(
-            nd.mean(errD).asscalar()) + " " + str(nd.mean(errD2).asscalar()) + " " + nd.mean(errR).asscalar() +" "+str(acc) + " " + str(acc2)+"\n")
+            nd.mean(errD).asscalar()) + " " + str(nd.mean(errD2).asscalar()) + " " + str(nd.mean(errR).asscalar()) +" "+str(acc) + " " + str(acc2)+"\n")
         tp_file.close()
         metric.reset()
         metric2.reset()
         train_data.reset()
-
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
@@ -248,6 +247,7 @@ def main(opt):
     if opt.istest:
         print('testing not implemented')
     else:
+	print("Latent variable dim : " + str(opt.latent))
         netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2 = set_network(opt.depth, ctx, opt.lr, opt.beta1,opt.ndf,  opt.ngf,opt.latent, opt.append)
         if opt.graphvis:
             print(netG)

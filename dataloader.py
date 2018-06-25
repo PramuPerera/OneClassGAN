@@ -1,7 +1,9 @@
 import os
 import numpy as np
 def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
-    # read names of classes; treat last class as clutter
+    # read names of classes; treat last class as clutte
+    print("Data load")
+    print(dataset + "_folderlist.txt")
     text_file = open(dataset + "_folderlist.txt", "r")
     folders = text_file.readlines()
     text_file.close()
