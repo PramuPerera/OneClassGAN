@@ -31,7 +31,7 @@ for classname in [0]:#folders:
         epoch = []
         trainerr = []
         valerr =[]
-        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname grapesip64 --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/  --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset Mnist --latent '+str(opt.latent))
+        #os.system('python2 TrainNovelty.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname fmnist  --img_wd 61 --img_ht 61 --depth 3 --datapath ../  --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset fmnist  --ntype 1   --latent '+str(opt.latent))
 	res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()
@@ -45,10 +45,11 @@ for classname in [0]:#folders:
             trainerr.append(temp[0])
             valerr.append(temp[1])
         print(valerr)
-        valep = np.argmin(np.array(valerr[5:len(valerr)]))
-        trainep = np.argmin(np.array(trainerr[5:len(trainerr)]))
+        valep = np.argmin(np.array(valerr))
+        trainep = np.argmin(np.array(trainerr))
         print(valerr[valep])
         print(trainerr[trainep])
+	print(valep)
         opt.epochs =follist[ valep]
         roc_aucval = vaetest.main(opt)
         opt.epochs = follist[trainep]
@@ -56,3 +57,6 @@ for classname in [0]:#folders:
     	text_file = open(opt.dataset + "_progress.txt", "a")
         text_file.write("%s %s %s %s %s %s %s %s %s %s\n" % (str(valerr[valep]), str(trainerr[trainep]), str(roc_aucval[0]),str(roc_auctrain[0]), str(roc_aucval[1]),str(roc_auctrain[1]), str(roc_aucval[2]),str(roc_auctrain[2]), str(roc_aucval[3]),str(roc_auctrain[3]  )))
         text_file.close()
+	copyfile('checkpoints/'+opt.expname+"_"+str(follist[valep])+"_En.params", 'checkpoints/'+opt.expname+"_class"+str(classname)+"_"+str(follist[valep])+"_En.params")
+        copyfile('checkpoints/'+opt.expname+"_"+str(follist[valep])+"_De.params", 'checkpoints/'+opt.expname+"_class"+str(classname)+"_"+str(follist[valep])+"_De.params")
+
