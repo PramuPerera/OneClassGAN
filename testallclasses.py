@@ -30,7 +30,7 @@ for classname in folders:
     epoch = []
     trainerr = []
     valerr =[]
-    trainstring = "python2 TrainNovelty.py --epochs " + str(opt.epochs) + ' --batch_size ' + str(opt.batch_size) +' --ndf ' +  str(opt.ndf) +' --ngf ' + str(opt.ngf) +' --istest 0 --expname ' + opt.expname +' --img_wd ' + str(opt.img_wd) + ' --img_ht' + str(opt.img_ht)+ ' --depth ' + str(opt.depth)+ ' --datapath ' + opt.datapath + ' --noisevar ' + str(opt.noisevar) +' --lambda1 ' + str(500)+ ' --seed 1000  --append ' + str(opt.append)+' --dataset ' + opt.dataset + ' --ntype ' +str( opt.ntype) +' --latent '+str(opt.latent)
+    trainstring = "python2 TrainNovelty.py --epochs " + str(opt.epochs) + ' --batch_size ' + str(opt.batch_size) +' --ndf ' +  str(opt.ndf) +' --ngf ' + str(opt.ngf) +' --istest 0 --expname ' + opt.expname +' --img_wd ' + str(opt.img_wd) + ' --img_ht ' + str(opt.img_ht)+ ' --depth ' + str(opt.depth)+ ' --datapath ' + opt.datapath + ' --noisevar ' + str(opt.noisevar) +' --lambda1 ' + str(500)+ ' --seed 1000  --append 0  --dataset ' + opt.dataset + ' --ntype ' +str( opt.ntype) +' --latent '+str(opt.latent)
     os.system(trainstring)
     res_file = open(opt.expname + "_validtest.txt", "r")
     results = res_file.readlines()
