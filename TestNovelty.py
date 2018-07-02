@@ -24,6 +24,7 @@ import options
 import visual
 import random
 import argparse
+from shutil import copyfile
 #logging.basicConfig()
 
 
@@ -39,7 +40,7 @@ def main(opt):
     testclasspaths = []
     testclasslabels = []
     print('loading test files')
-    filename = '_trainlist.txt'
+    filename = '_testlist.txt'
     with open(opt.dataset+"_"+opt.expname+filename , 'r') as f:
         for line in f:
             testclasspaths.append(line.split(' ')[0])
@@ -71,34 +72,35 @@ def main(opt):
     scorelist4 = [];
     test_data.reset()
     count = 0
+    
     for batch in (test_data):
-        output1=0
-        output2=0
-        output3=0
-        output4=0
+        output1=np.zeros(opt.batch_size)
+        output2=np.zeros(opt.batch_size)
+        output3=np.zeros(opt.batch_size)
+        output4=np.zeros(opt.batch_size)
         real_in = batch.data[0].as_in_context(ctx)
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
         outnn = (netDe(netEn((real_in))))
+	out = outnn
         output3 = nd.mean((outnn - real_out)**2, (1, 3, 2)).asnumpy()
         if opt.ntype >1: #AE
-            out_concat = nd.concat(real_in, outnn, dim=1) if opt.append else outnn
-            output1 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()
-            out_concat = nd.concat(real_in, real_in, dim=1) if opt.append else real_in
-            output2 = netD2(netEn(out_concat))  # Image with no noise
-            output2 = nd.mean(output2, (1)).asnumpy()
-            out = netDe(netEn(real_out))
-            out_concat =  nd.concat(real_in, out, dim=1) if opt.append else out
-            output = netD(out_concat) #Denoised image
-            output4 = nd.mean(output, (1, 3, 2)).asnumpy()
-
+        	out_concat = nd.concat(real_in, outnn, dim=1) if opt.append else outnn
+        	output1 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()
+        	out_concat = nd.concat(real_in, real_in, dim=1) if opt.append else real_in
+        	output2 = netD2(netEn(out_concat))  # Image with no noise
+        	output2 = nd.mean(output2, (1)).asnumpy()
+        	out = netDe(netEn(real_out))
+        	out_concat =  nd.concat(real_in, out, dim=1) if opt.append else out
+        	output = netD(out_concat) #Denoised image
+        	output4 = nd.mean(output, (1, 3, 2)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())
         scorelist1 = scorelist1+list(output1)
         scorelist2 = scorelist2+list(output2)
         scorelist3 = scorelist3+list(output3)
         scorelist4 = scorelist4+list(output4)
-
-        fake_img1 = nd.concat(real_in[0],real_out[0], out[0], outnn[0],dim=1)
+        out = netDe(netEn(real_in))
+	fake_img1 = nd.concat(real_in[0],real_out[0], out[0], outnn[0],dim=1)
         fake_img2 = nd.concat(real_in[1],real_out[1], out[1],outnn[1], dim=1)
         fake_img3 = nd.concat(real_in[2],real_out[2], out[2], outnn[2], dim=1)
         fake_img4 = nd.concat(real_in[3],real_out[3],out[3],outnn[3], dim=1)
@@ -106,16 +108,18 @@ def main(opt):
         #print(np.shape(fake_img))
         visual.visualize(fake_img)
         plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
-    print(np.shape(scorelist1))
-    print(np.shape(lbllist))
-    fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
-    roc_auc1 = auc(fpr, tpr)
-    fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
-    roc_auc2 = auc(fpr, tpr)
     fpr, tpr, _ = roc_curve(lbllist, scorelist3, 1)
+    roc_auc1 = 0
+    roc_auc2 = 0
+    roc_auc4 = 0
     roc_auc3 = auc(fpr, tpr)
-    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
-    roc_auc4 = auc(fpr, tpr)
+    if int(opt.ntype) >1: #AE
+	    fpr, tpr, _ = roc_curve(lbllist, scorelist1, 1)
+	    roc_auc1 = auc(fpr, tpr)
+	    fpr, tpr, _ = roc_curve(lbllist, scorelist2, 1)
+	    roc_auc2 = auc(fpr, tpr)
+    	    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
+	    roc_auc4 = auc(fpr, tpr)
     fakecode = nd.random_normal(loc=0, scale=1, shape=(16, opt.latent, 1 ,1), ctx=ctx)
     out = netDe(fakecode)
     fake_img1 = nd.concat(out[0],out[1], out[2], out[3],dim=1)

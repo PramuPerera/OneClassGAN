@@ -9,8 +9,12 @@ from mxnet.gluon.nn import Dense, Activation, Conv2D, Conv2DTranspose, \
 
 def set_network(opt, ctx):
     depth = opt.depth
-    lr = opt.lr
-    beta1 = opt.beta1
+    if opt.istest:
+	lr = 0
+	beta1 = 0
+    else:
+	lr = opt.lr
+    	beta1 = opt.beta1
     ndf = opt.ndf
     ngf = opt.ngf
     latent = opt.latent
