@@ -64,6 +64,13 @@ def main(opt):
     netDe = networks[1]
     netD = networks[2]
     netD2 = networks[3]
+    netEn.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_En.params', ctx=ctx)
+    netDe.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_De.params', ctx=ctx)
+    if opt.ntype>1:
+    	netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
+    if opt.ntype>2:
+	netD2.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D2.params', ctx=ctx)
+
     print('Model loading done')
     lbllist = [];
     scorelist1 = [];
@@ -74,6 +81,7 @@ def main(opt):
     count = 0
     
     for batch in (test_data):
+	count = count+1
         output1=np.zeros(opt.batch_size)
         output2=np.zeros(opt.batch_size)
         output3=np.zeros(opt.batch_size)
@@ -108,6 +116,8 @@ def main(opt):
         #print(np.shape(fake_img))
         visual.visualize(fake_img)
         plt.savefig('outputs/T_'+opt.expname+'_'+str(count)+'.png')
+    print("Positives" + str(np.sum(lbllist)))
+    print("Negatives" + str(np.shape(lbllist)-np.sum(lbllist) ))
     fpr, tpr, _ = roc_curve(lbllist, scorelist3, 1)
     roc_auc1 = 0
     roc_auc2 = 0

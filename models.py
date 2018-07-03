@@ -27,25 +27,25 @@ def set_network(opt, ctx):
     # load networks based on opt.ntype (1 - AE 2 - ALOCC 3 - latentD 4 - adnov)
     if append:
         if opt.ntype > 1:
-            netD = Discriminator(in_channels=6, n_layers=2, ndf=ndf)
+            netD = Discriminator(in_channels=6, n_layers=2, ndf=ndf, istest=opt.istest)
             network_init(netD, ctx=ctx)
             trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
         if opt.ntype > 2:
-            netD2 = LatentDiscriminator(in_channels=6, n_layers=2, ndf=ndf)
+            netD2 = LatentDiscriminator(in_channels=6, n_layers=2, ndf=ndf, istest=opt.istest)
             network_init(netD2, ctx=ctx)
             trainerD2 = gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     else:
         if opt.ntype > 1:
-            netD = Discriminator(in_channels=3, n_layers=2, ndf=ndf)
+            netD = Discriminator(in_channels=3, n_layers=2, ndf=ndf, istest=opt.istest)
             network_init(netD, ctx=ctx)
             trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
         if opt.ntype > 2:
-            netD2 = LatentDiscriminator(in_channels=3, n_layers=2, ndf=ndf)
+            netD2 = LatentDiscriminator(in_channels=3, n_layers=2, ndf=ndf, istest=opt.istest)
             network_init(netD2, ctx=ctx)
             trainerD2 = gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
 
-    netEn = Encoder(in_channels=3, n_layers=depth, latent=latent, ndf=ngf)
-    netDe = Decoder(in_channels=3, n_layers=depth, latent=latent, ndf=ngf)
+    netEn = Encoder(in_channels=3, n_layers=depth, latent=latent, ndf=ngf, istest=opt.istest)
+    netDe = Decoder(in_channels=3, n_layers=depth, latent=latent, ndf=ngf, istest=opt.istest)
     network_init(netEn, ctx=ctx)
     trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     network_init(netDe, ctx=ctx)

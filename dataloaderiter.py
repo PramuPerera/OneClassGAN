@@ -34,10 +34,11 @@ def loadPaths(opt):
     folders = text_file.readlines()
     text_file.close()
     folders = [i.split('\n', 1)[0] for i in folders]
+    print(folders)
     cluttersize = int(round(len(testclasslabels)/len(folders)))
     for i in range(len(folders) ):
         dirs = os.listdir(datapath + dataset + '/' + folders[i])
-    for nfile in dirs[0: cluttersize]:
+    	for nfile in dirs[0: cluttersize]:
             testclasspaths.append(datapath + dataset + '/' +folders[i] + '/' + nfile)
             testclasslabels.append(-1)
     # write test files and labels to external file for future testing
