@@ -96,8 +96,8 @@ def main(opt):
         	out_concat = nd.concat(real_in, outnn, dim=1) if opt.append else outnn
         	output1 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()
         	out_concat = nd.concat(real_in, real_in, dim=1) if opt.append else real_in
-        	output2 = netD2(netEn(out_concat))  # Image with no noise
-        	output2 = nd.mean(output2, (1)).asnumpy()
+        	output2 = netD((out_concat))  # Image with no noise
+        	output2 = nd.mean(output2, (1,3,2)).asnumpy()
         	out = netDe(netEn(real_out))
         	out_concat =  nd.concat(real_in, out, dim=1) if opt.append else out
         	output = netD(out_concat) #Denoised image

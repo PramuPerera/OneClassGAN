@@ -344,12 +344,12 @@ def traincvpr18(opt, train_data, val_data, ctx, networks):
                 fake_concat = nd.concat(real_in, fake_out, dim=1) if append else fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
-                errG = errG2 + GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
+                errG = GAN_loss(output, real_label) + L1_loss(real_out, fake_out) * lambda1
                 errR = L1_loss(real_out, fake_out)
                 errG.backward()
             trainerDe.step(batch.data[0].shape[0])
             trainerEn.step(batch.data[0].shape[0])
-        loss_rec_G.append(nd.mean(errG-errG2).asscalar()-nd.mean(errR).asscalar()*lambda1)
+        loss_rec_G.append(nd.mean(errG).asscalar()-nd.mean(errR).asscalar()*lambda1)
         loss_rec_D.append(nd.mean(errD).asscalar())
         loss_rec_R.append(nd.mean(errR).asscalar())
         name, acc = metric.get()
@@ -382,7 +382,7 @@ def traincvpr18(opt, train_data, val_data, ctx, networks):
             netEn.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_De.params"
             netDe.save_params(filename)
-            fake_img1 = nd.concat(real_in[0], eal_out[0], fake_out[0], dim=1)
+            fake_img1 = nd.concat(real_in[0], real_out[0], fake_out[0], dim=1)
             fake_img2 = nd.concat(real_in[1], real_out[1], fake_out[1], dim=1)
             fake_img3 = nd.concat(real_in[2], real_out[2], fake_out[2], dim=1)
             val_data.reset()
