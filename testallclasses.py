@@ -5,7 +5,7 @@ import os
 import random
 random.seed(1000)
 opt = options.test_options()
-opt.istest = 0
+opt.istest = 1
 
 text_file = open(opt.dataset + "_progress.txt", "w")
 text_file.close()
@@ -17,7 +17,7 @@ text_file.close()
 
 follist = range(0,201,10)
 folders = range(0,10)
-for classname in [0]:#folders:
+for classname in folders:
         filelisttext = open(opt.dataset+'_trainlist.txt', 'w')
 	filelisttext.write(str(classname))
 	filelisttext.close()
@@ -31,7 +31,7 @@ for classname in [0]:#folders:
         epoch = []
         trainerr = []
         valerr =[]
-        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname grapesip64 --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/  --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset Mnist --latent '+str(opt.latent))
+        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8 --ngf 64 --istest 0 --expname Mnist --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/  --noisevar 0.2 --lambda1 500 --seed 1000 --append 0 --dataset Mnist  --latent '+str(opt.latent))
 	res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()
@@ -45,8 +45,8 @@ for classname in [0]:#folders:
             trainerr.append(temp[0])
             valerr.append(temp[1])
         print(valerr)
-        valep = np.argmin(np.array(valerr[5:len(valerr)]))
-        trainep = np.argmin(np.array(trainerr[5:len(trainerr)]))
+        valep = np.argmin(np.array(valerr))
+        trainep = np.argmin(np.array(trainerr))
         print(valerr[valep])
         print(trainerr[trainep])
         opt.epochs =follist[ valep]

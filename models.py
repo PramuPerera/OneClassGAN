@@ -365,10 +365,10 @@ class Encoder(HybridBlock):
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
             #self.model.add(BatchNorm(momentum=0.1, in_channels =latent, use_global_stats=istest))
-            if usetanh:
-                self.model.add(Activation(activation='tanh'))
-            else:
-                self.model.add(LeakyReLU(alpha=0.2))
+            #if usetanh:
+            #    self.model.add(Activation(activation='tanh'))
+            #else:
+            #    self.model.add(LeakyReLU(alpha=0.2))
 
 
                      

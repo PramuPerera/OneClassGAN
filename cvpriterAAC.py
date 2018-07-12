@@ -111,7 +111,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 errD_fake2 = GAN_loss(output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
                 metric.update([fake_label, ], [output, ])
-                metric2.update([fake_label, ], [rec_output, ])
+                metric2.update([fake_latent_label, ], [output2, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
                 output2 = netD2(real_latent)
@@ -122,10 +122,11 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 #errD = (errD_real + 0.5*(errD_fake+errD_fake2)) * 0.5
                 errD = (errD_real + errD_fake) * 0.5
                 errD2 = (errD2_real + errD2_fake) * 0.5
-                errD.backward()
-                errD2.backward()
+                errDtotal = errD+errD2
+		errDtotal.backward()
+                #errD2.backward()
                 metric.update([real_label, ], [output, ])
-            	metric2.update([real_label, ], [rec_output, ])
+            	metric2.update([real_latent_label, ], [output2, ])
             trainerD.step(batch.data[0].shape[0])
             trainerD2.step(batch.data[0].shape[0])
             ############################
@@ -143,8 +144,11 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 real_latent_label = nd.ones(output2.shape, ctx=ctx)
                 errG2 = GAN_loss(rec_output, real_label)
                 errR = L1_loss(real_out, fake_out) * lambda1
-                errG = GAN_loss(output2, real_latent_label)+errG2+errR
-                errG.backward()
+                #errG =0.5*(GAN_loss(output, real_label)+GAN_loss(rec_output, real_label))+ GAN_loss(output2, real_latent_label)+errG2+errR
+                errG = GAN_loss(rec_output, real_label)+ GAN_loss(output2, real_latent_label)+errR
+
+		errG.backward()
+		#### OUTPUT REC WAS NOT BACKPROPAGETED IN ERRG ####
             trainerDe.step(batch.data[0].shape[0])
             trainerEn.step(batch.data[0].shape[0])
             loss_rec_G2.append(nd.mean(errG2).asscalar())
@@ -205,7 +209,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 y = netDe(fake_latent)
                 fake_out = y
                 metricMSE.update([fake_out, ], [real_out, ])
-                _, acc2 = metricMSE.get()
+            _, acc2 = metricMSE.get()
             text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
             metricMSE.reset()
 

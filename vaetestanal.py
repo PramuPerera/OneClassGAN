@@ -136,7 +136,7 @@ def main(opt):
 	    roc_auc3 = auc(fpr, tpr)
 	    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
 	    roc_auc4 = auc(fpr, tpr)
-	    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
+	    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4, lbllist, scorelist3, testclasspaths, testclasslabels])
     else:
 	    return([0,0,0,0])
     fakecode = nd.random_normal(loc=0, scale=1, shape=(16, 4096,1,1), ctx=ctx)
@@ -153,4 +153,8 @@ def main(opt):
 if __name__ == "__main__":
     opt = options.test_options()
     roc_auc = main(opt)
-    print(roc_auc)
+    #print(roc_auc)
+    import pickle
+    filehandler = open("data.obj","wb")
+    pickle.dump(roc_auc,filehandler)
+    filehandler.close()
