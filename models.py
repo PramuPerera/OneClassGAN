@@ -134,7 +134,9 @@ class LatentDiscriminator(HybridBlock):
             self.model.add(Activation(activation='relu'))
 	    self.model.add(gluon.nn.Dense(32))
        	    self.model.add(Activation(activation='relu'))
-	    self.model.add(gluon.nn.Dense(16))    
+	    self.model.add(gluon.nn.Dense(16))   
+            self.model.add(Activation(activation='relu'))
+            self.model.add(gluon.nn.Dense(1)) 
 	    self.model.add(Activation(activation='sigmoid'))        
     def hybrid_forward(self, F, x):
         out = self.model(x)
@@ -340,6 +342,7 @@ class CEGeneratorP(HybridBlock):
 class Encoder(HybridBlock):
     def __init__(self, in_channels, ndf=64, n_layers=3, use_bias=False, istest=False,latent=256, usetanh = False ):
             super(Encoder, self).__init__()
+	    usetanh = True
             self.model = HybridSequential()
             kernel_size = 5
             padding = 0 #int(np.ceil((kernel_size - 1) / 2))
@@ -364,11 +367,11 @@ class Encoder(HybridBlock):
             self.model.add(Conv2D(channels=latent, kernel_size=kernel_size, strides=2,
                                   padding=padding, in_channels=ndf * nf_mult_prev,
                                   use_bias=use_bias))
-            #self.model.add(BatchNorm(momentum=0.1, in_channels =latent, use_global_stats=istest))
-            if usetanh:
-                self.model.add(Activation(activation='tanh'))
-            else:
-                self.model.add(LeakyReLU(alpha=0.2))
+            self.model.add(BatchNorm(momentum=0.1, in_channels =latent, use_global_stats=istest))
+            #if usetanh:
+            #    self.model.add(Activation(activation='tanh'))
+            #else:
+            #    self.model.add(LeakyReLU(alpha=0.2))
 
 
                      

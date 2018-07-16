@@ -32,11 +32,11 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf,latent, append=True, solver='ada
     # Pixel2pixel networks
     if append:
         netD = models.Discriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-        netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+       #netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)##netG = models.CEGenerator(in_channels=3, n_layers=depth, ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
 
     else:
         netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
-        netD2 = models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
+        netD2 = None #models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
         #netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
         #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
         netEn = models.Encoder(in_channels=3, n_layers =depth,latent=latent, ndf=ngf)
@@ -46,12 +46,12 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf,latent, append=True, solver='ada
     models.network_init(netEn, ctx=ctx)
     models.network_init(netDe, ctx=ctx)
     models.network_init(netD, ctx=ctx)
-    models.network_init(netD2, ctx=ctx)
+    #models.network_init(netD2, ctx=ctx)
     
     trainerEn = gluon.Trainer(netEn.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerDe = gluon.Trainer(netDe.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
     trainerD = gluon.Trainer(netD.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
-    trainerD2 = gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate': lr, 'beta1': beta1})
+    trainerD2 = None # gluon.Trainer(netD2.collect_params(), 'adam', {'learning_rate': 2.0*lr, 'beta1': beta1})
     return netEn, netDe, netD, netD2, trainerEn, trainerDe, trainerD, trainerD2
 
 def facc(label, pred):
@@ -103,33 +103,33 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 # Train with fake image
                 # Use image pooling to utilize history imagesi
                 output = netD(fake_concat)
-                output2 = netD2(fake_latent)
+                #output2 = netD2(fake_latent)
                 fake_label = nd.zeros(output.shape, ctx=ctx)
-                fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
+                #fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
                 eps = nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx) #nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
                 rec_output = netD(netDe(eps))
                 errD_fake = GAN_loss(rec_output, fake_label)
                 errD_fake2 = GAN_loss(output, fake_label)
-                errD2_fake = GAN_loss(output2, fake_latent_label)
+                #errD2_fake = GAN_loss(output2, fake_latent_label)
                 metric.update([fake_label, ], [output, ])
-                metric2.update([fake_latent_label, ], [output2, ])
+                metric2.update([fake_label, ], [rec_output, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
-                output2 = netD2(real_latent)
+                #output2 = netD2(real_latent)
                 real_label = nd.ones(output.shape, ctx=ctx)
-                real_latent_label =  nd.ones(output2.shape, ctx=ctx)
+                #real_latent_label =  nd.ones(output2.shape, ctx=ctx)
                 errD_real = GAN_loss(output, real_label)
-                errD2_real =  GAN_loss(output2, real_latent_label)
+                #errD2_real =  GAN_loss(output2, real_latent_label)
                 #errD = (errD_real + 0.5*(errD_fake+errD_fake2)) * 0.5
                 errD = (errD_real + errD_fake) * 0.5
-                errD2 = (errD2_real + errD2_fake) * 0.5
-		totalerrD = errD+errD2
+                #errD2 = (errD2_real + errD2_fake) * 0.5
+		totalerrD = errD
                 totalerrD.backward()
                 #errD2.backward()
                 metric.update([real_label, ], [output, ])
-            	metric2.update([real_latent_label, ], [output2, ])
+            	metric2.update([real_label, ], [rec_output, ])
             trainerD.step(batch.data[0].shape[0])
-            trainerD2.step(batch.data[0].shape[0])
+            #trainerD2.step(batch.data[0].shape[0])
             ############################
             # (2) Update G network: maximize log(D(x, G(x, z))) - lambda1 * L1(y, G(x, z))
             ###########################
@@ -137,15 +137,15 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 eps = nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)#nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
                 rec_output = netD(netDe(eps))
                 fake_latent= (netEn(real_in))
-                output2 = netD2(fake_latent)
+                #output2 = netD2(fake_latent)
                 fake_out = netDe(fake_latent)
                 fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
                 output = netD(fake_concat)
                 real_label = nd.ones(output.shape, ctx=ctx)
-                real_latent_label = nd.ones(output2.shape, ctx=ctx)
+                #real_latent_label = nd.ones(output2.shape, ctx=ctx)
                 errG2 = GAN_loss(rec_output, real_label)
                 errR = L1_loss(real_out, fake_out) * lambda1
-                errG = 10.0*GAN_loss(output2, real_latent_label)+errG2+errR
+                errG = errG2+errR
                 errG.backward()
             trainerDe.step(batch.data[0].shape[0])
             trainerEn.step(batch.data[0].shape[0])
@@ -153,7 +153,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             loss_rec_G.append(nd.mean(nd.mean(errG)).asscalar()-nd.mean(errG2).asscalar()-nd.mean(errR).asscalar())
             loss_rec_D.append(nd.mean(errD).asscalar())
             loss_rec_R.append(nd.mean(errR).asscalar())
-            loss_rec_D2.append(nd.mean(errD2).asscalar())
+            loss_rec_D2.append(0)
             _, acc2 = metric2.get()
             name, acc = metric.get()
             acc_rec.append(acc)
@@ -166,7 +166,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - btic)))
                 #print(errD)
 		logging.info('discriminator loss = %f, D2 loss = %f, generator loss = %f, G2 loss = %f,  binary training acc = %f , D2 acc = %f, reconstruction error= %f  at iter %d epoch %d'
-                    	% (nd.mean(errD).asscalar(),nd.mean(errD2).asscalar(),
+                    	% (nd.mean(errD).asscalar(),0,
                       	nd.mean(errG-errG2-errR).asscalar(),nd.mean(errG2).asscalar(), acc,acc2,nd.mean(errR).asscalar() ,iter, epoch))
                 iter = iter + 1
         btic = time.time()
@@ -175,17 +175,9 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
         tp_file = open(expname + "_trainloss.txt", "a")
         tp_file.write(str(nd.mean(errG2).asscalar()) + " " + str(
             nd.mean(nd.mean(errG)).asscalar() - nd.mean(errG2).asscalar() - nd.mean(errR).asscalar()) + " " + str(
-            nd.mean(errD).asscalar()) + " " + str(nd.mean(errD2).asscalar()) + " " + str(nd.mean(errR).asscalar()) +" "+str(acc) + " " + str(acc2)+"\n")
+            nd.mean(errD).asscalar()) + " " + str(0) + " " + str(nd.mean(errR).asscalar()) +" "+str(acc) + " " + str(acc2)+"\n")
         tp_file.close()
         metric.reset()
-
-
-
-
-
-
-
-
         metric2.reset()
         train_data.reset()
 
@@ -196,7 +188,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D2.params"
-            netD2.save_params(filename)
+            #netD2.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_En.params"
             netEn.save_params(filename)
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_De.params"
@@ -215,7 +207,7 @@ def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, ne
                 y = netDe(fake_latent)
                 fake_out = y
                 metricMSE.update([fake_out, ], [real_out, ])
-            _, acc2 = metricMSE.get()
+                _, acc2 = metricMSE.get()
             text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
             metricMSE.reset()
 
@@ -266,15 +258,16 @@ def main(opt):
         loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
         plt.gcf().clear()
 	fig, ax1 = plt.subplots()
-	ax1.plot(loss_vec[2], label="R", alpha= 0.7)
+
+        ax1.plot(loss_vec[0], label="Dr", alpha = 0.7)
+        ax1.plot(loss_vec[4], label="Dl", alpha = 0.7)
+        ax1.plot(loss_vec[1], label="Gr", alpha=0.7)
+        ax1.plot(loss_vec[5], label="Gl", alpha=0.7)
+        ax1.plot(loss_vec[3], label="Accr", alpha = 0.7)
+	ax1.plot(loss_vec[6], label="Accl", alpha = 0.7)
 	ax2 = ax1.twinx() 
-        ax2.plot(loss_vec[0], label="Dr", alpha = 0.7)
-        ax2.plot(loss_vec[4], label="Dl", alpha = 0.7)
-        ax2.plot(loss_vec[1], label="Gr", alpha=0.7)
-        ax2.plot(loss_vec[5], label="Gl", alpha=0.7)
-        ax2.plot(loss_vec[3], label="Accr", alpha = 0.7)
-	ax2.plot(loss_vec[6], label="Accl", alpha = 0.7)
-        plt.legend()
+        ax2.plot(loss_vec[2], label="R", alpha= 0.7)
+	ax1.legend()
         plt.savefig('outputs/'+opt.expname+'_loss.png')
         return inclasses
 

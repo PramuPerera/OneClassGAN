@@ -1,11 +1,11 @@
 import options
-import vaetest
+import vaetest2
 import numpy as np
 import os
 import random
 random.seed(1000)
 opt = options.test_options()
-opt.istest = 0
+opt.istest = 1
 
 text_file = open(opt.dataset + "_progress.txt", "w")
 text_file.close()
@@ -17,7 +17,7 @@ text_file.close()
 
 follist = range(0,201,10)
 folders = range(0,10)
-for classname in  folders:
+for classname in folders:
         filelisttext = open(opt.dataset+'_trainlist.txt', 'w')
 	filelisttext.write(str(classname))
 	filelisttext.close()
@@ -31,7 +31,7 @@ for classname in  folders:
         epoch = []
         trainerr = []
         valerr =[]
-        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8  --ngf 64 --istest 0 --expname Mnist  --img_wd 61 --img_ht 61 --depth 3 --datapath ../mnist_png/mnist_png/  --noisevar 0.2  --lambda1 50 --seed 1000 --append 0 --dataset Mnist  --latent '+str(opt.latent))
+        os.system('python2 cvpriterAAC2.py --epochs 201 --batch_size 512 --ndf 32 --ngf 64 --istest 0 --expname fmnist  --img_wd 61 --img_ht 61 --depth 3 --datapath ../  --noisevar 0.2 --lambda1 1  --seed 1000 --append 0 --dataset fmnist --latent '+str(opt.latent))
 	res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()
@@ -42,23 +42,17 @@ for classname in  folders:
 	    #print(temp)
             epoch.append(temp[0])
             temp = temp[1].split(' ', 1)
-            trainerr.append(float(temp[0]))
-            valerr.append(float(temp[1]))
+            trainerr.append(temp[0])
+            valerr.append(temp[1])
         print(valerr)
-	print('Val min')
-	print( np.argmin(np.array(valerr)))
         valep = np.argmin(np.array(valerr))
-	print(valep)
         trainep = np.argmin(np.array(trainerr))
-	print(trainerr)
-	print(trainep)
-	print(valep)
         print(valerr[valep])
         print(trainerr[trainep])
         opt.epochs =follist[ valep]
-        roc_aucval = vaetest.main(opt)
+        roc_aucval = vaetest2.main(opt)
         opt.epochs = follist[trainep]
-        roc_auctrain = vaetest.main(opt)
+        roc_auctrain = vaetest2.main(opt)
     	text_file = open(opt.dataset + "_progress.txt", "a")
         text_file.write("%s %s %s %s %s %s %s %s %s %s\n" % (str(valerr[valep]), str(trainerr[trainep]), str(roc_aucval[0]),str(roc_auctrain[0]), str(roc_aucval[1]),str(roc_auctrain[1]), str(roc_aucval[2]),str(roc_auctrain[2]), str(roc_aucval[3]),str(roc_auctrain[3]  )))
         text_file.close()

@@ -30,21 +30,21 @@ def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
     # first 50% of each image is treated as training. remainder is treated as testing
     for lbl, nclass in enumerate(inclasses):
         dirs = os.listdir(datapath + dataset + '/' + nclass)
-        for nfile in range(int(len(dirs)/2)):
+        for nfile in range(int(len(dirs)*0.8)):
             inclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             inclasslabels.append(lbl)
-        for nfile in range(int(len(dirs)/2)+1, len(dirs)):
+        for nfile in range(int(len(dirs)*0.8)+1, len(dirs)):
             testclasspaths.append(datapath + dataset + '/' + nclass + '/' + dirs[nfile])
             testclasslabels.append(lbl)
     validationclasspaths = list(testclasspaths)
     validationclasslabels = list(testclasslabels)
     # pick 50% of images from clutter class
-    cluttersize = int(round(len(testclasslabels)))
 
     text_file = open(dataset + "_novellist.txt", "r")
     folders = text_file.readlines()
     text_file.close()
     folders = [i.split('\n', 1)[0] for i in folders]
+    cluttersize = int(round(len(testclasslabels)/len(folders)))
     for i in range(len(folders) ):
         dirs = os.listdir(datapath + dataset + '/' + folders[i])
 	for nfile in dirs:
