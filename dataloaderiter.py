@@ -47,6 +47,7 @@ def loadPaths(dataset, datapath, expname, minquery = 16, classes=""):
     cluttersize = int(round(len(testclasslabels)/len(folders)))
     for i in range(len(folders) ):
         dirs = os.listdir(datapath + dataset + '/' + folders[i])
+	dirs = dirs[0:cluttersize]
 	for nfile in dirs:
         	testclasspaths.append(datapath + dataset + '/' +folders[i] + '/' + nfile)
         	testclasslabels.append(-1)

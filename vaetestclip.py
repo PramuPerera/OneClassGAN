@@ -17,7 +17,7 @@ import numpy as np
 from random import shuffle
 from sklearn.metrics import roc_curve, auc
 import load_image
-import models
+import modelsclip
 from datetime import datetime
 import time
 import logging
@@ -25,21 +25,8 @@ import options
 import visual
 import random
 import argparse
-from skimage import exposure
 #logging.basicConfig()
 
-def image_histogram_equalization(image, number_bins=256):
-    # from http://www.janeriksolem.net/2009/06/histogram-equalization-with-python-and.html
-
-    # get image histogram
-    image_histogram, bins = np.histogram(image.flatten(), number_bins, normed=True)
-    cdf = image_histogram.cumsum() # cumulative distribution function
-    cdf = 255 * cdf / cdf[-1] # normalize
-
-    # use linear interpolation of cdf to find new pixel values
-    image_equalized = np.interp(image.flatten(), bins[:-1], cdf)
-
-    return image_equalized.reshape(image.shape)
 
 
 def facc(label, pred):
@@ -51,12 +38,12 @@ def facc(label, pred):
 
 def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
     if append:
-            netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
+            netD = modelsclip.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
     else:        
-            netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
-    netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, latent=64,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, latent=64,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)
+            netD = modelsclip.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
+    netEn = modelsclip.Encoder(in_channels=3, n_layers=depth, istest=True, latent=128,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netDe = modelsclip.Decoder(in_channels=3, n_layers=depth, istest=True, latent=128,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netD2 = modelsclip.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)
 
 
     return netEn, netDe,  netD, netD2 
@@ -86,10 +73,10 @@ def main(opt):
     print('shuffling')
     random.shuffle(c)
 
-    #testclasslabels, testclasspaths = zip(*c)
-    #testclasslabels = testclasslabels[1:5000]
-    #testclasspaths = testclasspaths[1:5000]
-    ltnt = 64
+    testclasslabels, testclasspaths = zip(*c)
+    testclasslabels = testclasslabels[1:5000]
+    testclasspaths = testclasspaths[1:5000]
+
     print('loading pictures')
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
     print('picture loading done')
@@ -117,10 +104,10 @@ def main(opt):
         out_concat =  nd.concat(real_out, outnn, dim=1) if opt.append else  outnn
         output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
 	code = netEn(real_in)
-	#code  = nd.clip(code,-1,1)
-	#eq_code = img_eq = exposure.equalize_hist(code.asnumpy(), nbins=8)
-	#code = nd.array(eq_code, ctx=ctx)
-	code = nd.ones_like(code,ctx=ctx)
+	print(code[0])
+	code[code>1] = 0
+	code[code<-1] = 0#code  = nd.clip(code,-1,1)
+	print(code[0])
         out = netDe(code)
         out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
         output = netD(out_concat) #Denoised image
@@ -170,16 +157,15 @@ def main(opt):
 
 
             plt.gcf().clear()
-            inputT = nd.zeros((ltnt,ltnt,1,1),ctx=ctx)
-            for i in range(0,ltnt):
+            inputT = nd.zeros((128,128,1,1),ctx=ctx)
+            for i in range(0,128):
                 inputT[i,i,:,:] = -1
-            print(inputT)
             out = netDe(inputT)
             count = 0
-            for i in range(int(math.ceil(math.sqrt(ltnt)))):
-                for j in range(int(math.ceil(math.sqrt(ltnt)))):
-                   if count<ltnt:
-                        plt.subplot(math.ceil(math.sqrt(ltnt)),math.ceil(math.sqrt(ltnt)),count+1)
+            for i in range(int(math.ceil(math.sqrt(128)))):
+                for j in range(int(math.ceil(math.sqrt(128)))):
+                   if count<128:
+                        plt.subplot(math.ceil(math.sqrt(128)),math.ceil(math.sqrt(128)),count+1)
                         plt.imshow(((out[count].asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
                         plt.axis('off')
                    count+=1

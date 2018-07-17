@@ -9,9 +9,28 @@ import matplotlib.pyplot as plt
 import mxnet.ndarray as nd
 import visual
 import dataloaderiter as dload
+from skimage import exposure
 #random.seed(1000)
 opt = options.test_options()
 opt.istest = 0
+
+
+
+
+def image_histogram_equalization(image, number_bins=256):
+    # from http://www.janeriksolem.net/2009/06/histogram-equalization-with-python-and.html
+
+    # get image histogram
+    image_histogram, bins = np.histogram(image.flatten(), number_bins, normed=True)
+    cdf = image_histogram.cumsum() # cumulative distribution function
+    cdf = 255 * cdf / cdf[-1] # normalize
+
+    # use linear interpolation of cdf to find new pixel values
+    image_equalized = np.interp(image.flatten(), bins[:-1], cdf)
+
+    return image_equalized.reshape(image.shape)
+
+
 
 #First read all classes one at a time and iterate through all
 #text_file = open(opt.dataset + "_folderlist.txt", "r")
@@ -26,7 +45,7 @@ for classname in [8]: #folders:
     	ctx = mx.gpu() if opt.use_gpu else mx.cpu()
 	testclasspaths = []
 	testclasslabels = []
-	with open(opt.dataset+"_"+opt.expname+'_testlist.txt' , 'r') as f:
+	with open(opt.dataset+"_"+opt.expname+'_trainlist.txt' , 'r') as f:
         	for line in f:
             		testclasspaths.append(line.split(' ')[0])
             		if int(line.split(' ')[1])==-1:
@@ -53,13 +72,15 @@ for classname in [8]: #folders:
     	#netD2.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D2.params', ctx=ctx)
 
 	#fakecode = nd.random.uniform(low = -1, high = 1, shape=(16, 4096,1,1), ctx=ctx)
-        fakecode = nd.random.uniform(low = -1, high = 1, shape=(16, 128,1,1), ctx=ctx)
+        fakecode = nd.random.uniform(low = -1, high = 1, shape=(16, 64,1,1), ctx=ctx)
 	out = netDe(fakecode)
 	import load_image
 	test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
     	for batch in (test_data):
         	real_in = batch.data[0].as_in_context(ctx)
         code = netEn(real_in)
+	eq_code = img_eq = exposure.equalize_hist(code.asnumpy(), nbins=8)
+        code = nd.array(eq_code, ctx=ctx)
 	recon = netDe(code)
 	
 	print(nd.max(netEn(real_in)))
