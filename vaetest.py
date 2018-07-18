@@ -66,12 +66,7 @@ def main(opt):
     testclasspaths = []
     testclasslabels = []
     print('loading test files')
-    if opt.istest:
-        filename = '_testlist.txt'
-    elif opt.isvalidation:
-	filename = '_trainlist.txt'
-    else:
-        filename = '_validationlist.txt'        
+    filename = '_testlist.txt'
     with open(opt.dataset+"_"+opt.expname+filename , 'r') as f:
         for line in f:
             testclasspaths.append(line.split(' ')[0])
@@ -120,7 +115,7 @@ def main(opt):
 	#code  = nd.clip(code,-1,1)
 	#eq_code = img_eq = exposure.equalize_hist(code.asnumpy(), nbins=8)
 	#code = nd.array(eq_code, ctx=ctx)
-	code = nd.ones_like(code,ctx=ctx)
+	#code = nd.ones_like(code,ctx=ctx)
         out = netDe(code)
         out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
         output = netD(out_concat) #Denoised image

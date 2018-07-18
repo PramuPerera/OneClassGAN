@@ -5,7 +5,7 @@ import os
 import random
 random.seed(1000)
 opt = options.test_options()
-opt.istest = 0
+opt.istest = 1
 
 text_file = open(opt.dataset + "_progress.txt", "w")
 text_file.close()
@@ -17,7 +17,7 @@ text_file.close()
 
 follist = range(0,201,10)
 folders = range(0,10)
-for classname in [8]:# folders:
+for classname in  folders:
         filelisttext = open(opt.dataset+'_trainlist.txt', 'w')
 	filelisttext.write(str(classname))
 	filelisttext.close()
@@ -31,7 +31,7 @@ for classname in [8]:# folders:
         epoch = []
         trainerr = []
         valerr =[]
-        #os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8  --ngf 64 --istest 0 --expname Mnist  --img_wd 61 --img_ht 61 --depth 3 --datapath ../../mnist_png/mnist_png/  --noisevar 0.2  --lambda1 50 --seed 1000 --append 0 --dataset Mnist  --latent '+str(opt.latent))
+        os.system('python2 cvpriterAAC.py --epochs 201 --batch_size 512 --ndf 8  --ngf 64 --istest 0 --expname Mnist  --img_wd 61 --img_ht 61 --depth 3 --datapath ../../mnist_png/mnist_png/  --noisevar 0.2  --lambda1 50 --seed 1000 --append 0 --dataset Mnist  --latent '+str(opt.latent))
 	res_file = open(opt.expname + "_validtest.txt", "r")
         results = res_file.readlines()
         res_file.close()
