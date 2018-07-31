@@ -14,8 +14,18 @@ from skimage import exposure
 opt = options.test_options()
 opt.istest = 0
 
-
-
+def heq(image, nbins ):
+    image = (image+1)*0.5
+    cdf, bin_centers = exposure.cumulative_distribution(image, nbins)
+    cdf = np.insert(cdf,0,0)
+    cdf = np.append(cdf,1)
+    bin_centers = np.insert(bin_centers,0,0)
+    bin_centers = np.append(bin_centers,1)
+    print(bin_centers)
+    print(cdf)
+    out = np.interp(image.flat, bin_centers, cdf)
+    out = (2*out)-1
+    return out.reshape(image.shape)
 
 def image_histogram_equalization(image, number_bins=256):
     # from http://www.janeriksolem.net/2009/06/histogram-equalization-with-python-and.html
@@ -45,7 +55,7 @@ for classname in [8]: #folders:
     	ctx = mx.gpu() if opt.use_gpu else mx.cpu()
 	testclasspaths = []
 	testclasslabels = []
-	with open(opt.dataset+"_"+opt.expname+'_trainlist.txt' , 'r') as f:
+	with open(opt.dataset+"_"+opt.expname+'_testlist.txt' , 'r') as f:
         	for line in f:
             		testclasspaths.append(line.split(' ')[0])
             		if int(line.split(' ')[1])==-1:
@@ -79,7 +89,8 @@ for classname in [8]: #folders:
     	for batch in (test_data):
         	real_in = batch.data[0].as_in_context(ctx)
         code = netEn(real_in)
-	eq_code = img_eq = exposure.equalize_hist(code.asnumpy(), nbins=8)
+	codecopy = code.copy()
+	eq_code = heq(code.asnumpy(), nbins=2)
         code = nd.array(eq_code, ctx=ctx)
 	recon = netDe(code)
 	
@@ -100,28 +111,57 @@ for classname in [8]: #folders:
 	print(np.shape(code[0].asnumpy().flatten()))
  	dec = netDe(code)
 	dec2 = netDe(fakecode)	
-	plt.subplot(6,2,1)
-	plt.hist((code[0].asnumpy().flatten() ),100)
-        plt.subplot(6,2,2)
+	plt.subplot(6,4,1)
+	plt.hist((codecopy[0].asnumpy().flatten() ),100)
+        plt.subplot(6,4,2)
+        plt.hist((code[0].asnumpy().flatten() ),100)
+        plt.subplot(6,4,3)
+        plt.imshow((((real_in[0]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+        plt.subplot(6,4,4)
 	plt.imshow((((dec[0]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
-        plt.subplot(6,2,3)
+        
+	plt.subplot(6,4,5)
+        plt.hist((codecopy[1].asnumpy().flatten() ),100)
+	plt.subplot(6,4,6)
         plt.hist((code[1].asnumpy().flatten() ),100)
-        plt.subplot(6,2,4)
+        plt.subplot(6,4,7)
+        plt.imshow((((real_in[1]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+        plt.subplot(6,4,8)
         plt.imshow((((dec[1]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
-        plt.subplot(6,2,5)
+        
+        plt.subplot(6,4,9)
+        plt.hist((codecopy[2].asnumpy().flatten() ),100)
+	plt.subplot(6,4,10)
         plt.hist((code[2].asnumpy().flatten() ),100)
-        plt.subplot(6,2,6)
+        plt.subplot(6,4,11)
+        plt.imshow((((real_in[2]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+        plt.subplot(6,4,12)
         plt.imshow((((dec[2]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
-	plt.subplot(6,2,7)
- 	plt.hist((fakecode[0].asnumpy().flatten()),100)
-        plt.subplot(6,2,8)
-        plt.imshow((((dec2[0]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
-        plt.subplot(6,2,9)
-        plt.hist((fakecode[1].asnumpy().flatten()),100)
-        plt.subplot(6,2,10)
-        plt.imshow((((dec2[1]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
-	plt.subplot(6,2,11)
-        plt.hist((fakecode[0].asnumpy().flatten()),100)
-        plt.subplot(6,2,12)
-        plt.imshow((((dec2[2]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+
+        plt.subplot(6,4,13)
+        plt.hist((codecopy[3].asnumpy().flatten() ),100)
+	plt.subplot(6,4,14)
+ 	plt.hist((code[3].asnumpy().flatten()),100)
+        plt.subplot(6,4,15)
+        plt.imshow((((real_in[3]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+        plt.subplot(6,4,16)
+        plt.imshow((((dec[3]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+
+        plt.subplot(6,4,17)
+        plt.hist((codecopy[4].asnumpy().flatten() ),100)
+        plt.subplot(6,4,18)
+        plt.hist((code[4].asnumpy().flatten()),100)
+        plt.subplot(6,4,19)
+        plt.imshow((((real_in[4]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+        plt.subplot(6,4,20)
+        plt.imshow((((dec[4]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+
+        plt.subplot(6,4,21)
+        plt.hist((codecopy[5].asnumpy().flatten() ),100)
+	plt.subplot(6,4,22)
+        plt.hist((code[5].asnumpy().flatten()),100)
+        plt.subplot(6,4,23)
+        plt.imshow((((real_in[5]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+        plt.subplot(6,4,24)
+        plt.imshow((((dec[5]).asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
 	plt.savefig('outputs/dist_'+opt.expname+'_.png')

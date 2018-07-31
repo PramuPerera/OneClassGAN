@@ -128,7 +128,7 @@ class LatentDiscriminator(HybridBlock):
 
         with self.name_scope():
 	    self.model = HybridSequential()
-            self.model.add(gluon.nn.Dense(128))
+            self.model.add(gluon.nn.Dense(64))
 	    self.model.add(Activation(activation='relu'))
             self.model.add(gluon.nn.Dense(64))
             self.model.add(Activation(activation='relu'))

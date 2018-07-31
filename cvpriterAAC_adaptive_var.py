@@ -64,7 +64,7 @@ def facc(label, pred):
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
-def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname,  append=True, useAE = False):
+def train(pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, lambda1, batch_size, expname,  append=True, useAE = False):
     tp_file = open(expname + "_trainloss.txt", "w")  
     tp_file.close()  
     text_file = open(expname + "_validtest.txt", "w")
@@ -83,17 +83,16 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
     acc2_rec = []
     loss_rec_D2 = []
     loss_rec_G2 = []
-    lr = 0.1*batch_size
+    lr = 0.002
+    #mu = nd.random_normal(loc=0, scale=1, shape=(batch_size/2,64,1,1), ctx=ctx) 
+    mu = nd.random.uniform(low= -1, high=1, shape=(batch_size/2,64,1,1),ctx=ctx)
+    #mu =  nd.zeros((batch_size/2,64,1,1),ctx=ctx)
+    sigma = nd.ones((64,1,1),ctx=ctx)
+    mu.attach_grad()
+    sigma.attach_grad()    
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
-    if cep == -1:
-	cep=0
-    else:
-	netEn.load_params('checkpoints/'+opt.expname+'_'+str(cep)+'_En.params', ctx=ctx)
-    	netDe.load_params('checkpoints/'+opt.expname+'_'+str(cep)+'_De.params', ctx=ctx)
-    	netD.load_params('checkpoints/'+opt.expname+'_'+str(cep)+'_D.params', ctx=ctx)
-    	netD2.load_params('checkpoints/'+opt.expname+'_'+str(cep)+'_D2.params', ctx=ctx)
-    for epoch in range(cep+1, epochs):
+    for epoch in range(epochs):
 
         tic = time.time()
         btic = time.time()
@@ -108,40 +107,10 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
             real_out = batch.data[1].as_in_context(ctx)
             fake_latent= netEn(real_in)
             #real_latent = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx)
-            real_latent = nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
+            real_latent = nd.multiply(nd.power(sigma,2),nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx))
+	    #nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
 	    fake_out = netDe(fake_latent)
             fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
-	    eps2 = nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
-            if epoch > 100:# and epoch%10==0:
-	      mu = nd.random.uniform(low= -1, high=1, shape=(batch_size,64,1,1),ctx=ctx)
-    	      #isigma = nd.ones((batch_size,64,1,1),ctx=ctx)*0.000001
-	      mu.attach_grad()
-	      #sigma.attach_grad()
-	      images = netDe(mu)
-              fake_img1T = nd.concat(images[0],images[1], images[2], dim=1)
-              fake_img2T = nd.concat(images[3],images[4], images[5], dim=1)
-              fake_img3T = nd.concat(images[6],images[7], images[8], dim=1)
-              fake_img = nd.concat(fake_img1T,fake_img2T, fake_img3T,dim=2)
-              visual.visualize(fake_img)
-              plt.savefig('outputs/'+expname+'_fakespre_'+str(epoch)+'.png')
-
-              for ep2 in range(5):
-                with autograd.record():
-                        #eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx) #
-                        eps2 = nd.tanh(mu) #+nd.multiply(eps,sigma))#nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
-                        rec_output = netD(netDe(eps2))
-                        fake_label = nd.zeros(rec_output.shape, ctx=ctx)
-                        errGS = GAN_loss(rec_output, fake_label)
-                        errGS.backward()
-                mu -= lr / mu.shape[0] * mu.grad
-              images = netDe(mu)
-              fake_img1T = nd.concat(images[0],images[1], images[2], dim=1)
-              fake_img2T = nd.concat(images[3],images[4], images[5], dim=1)
-              fake_img3T = nd.concat(images[6],images[7], images[8], dim=1)
-              fake_img = nd.concat(fake_img1T,fake_img2T, fake_img3T,dim=2)
-              visual.visualize(fake_img)
-              plt.savefig('outputs/'+expname+str(ep2)+'_fakespost_'+str(epoch)+'.png')
-	      eps2 = nd.tanh(mu)#+nd.multiply(eps,sigma))#nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
             with autograd.record():
                 # Train with fake image
                 # Use image pooling to utilize history imagesi
@@ -150,19 +119,14 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
                 fake_label = nd.zeros(output.shape, ctx=ctx)
                 fake_latent_label = nd.zeros(output2.shape, ctx=ctx)
 		noiseshape = (fake_latent.shape[0]/2,fake_latent.shape[1],fake_latent.shape[2],fake_latent.shape[3])
-                #eps2 = nd.random_normal(loc=0, scale=1, shape=noiseshape, ctx=ctx) #
-		eps = nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
-		#if epoch>100:
-		#		eps2 = nd.multiply(eps2 ,sigma)+mu
-		#	eps2 = nd.tanh(eps2)
-		#else:
-		#	eps2 = nd.random.uniform( low=-1, high=1, shape=noiseshape, ctx=ctx)
-		#eps2 = nd.concat(eps,eps2,dim=0)
-		rec_output = netD(netDe(eps))
+                eps2 = nd.multiply(nd.power(sigma,2),nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx))
+		#eps2 = nd.random_normal(loc=0, scale=sigma.asscalar(), shape=fake_latent.shape, ctx=ctx) #
+		#eps = nd.random.uniform( low=-1, high=1, shape=noiseshape, ctx=ctx)
+		rec_output = netD(netDe(eps2))
                 errD_fake = GAN_loss(rec_output, fake_label)
                 errD_fake2 = GAN_loss(output, fake_label)
                 errD2_fake = GAN_loss(output2, fake_latent_label)
-                metric.update([fake_label, ], [rec_output, ])
+                metric.update([fake_label, ], [output, ])
                 metric2.update([fake_latent_label, ], [output2, ])
                 real_concat =  nd.concat(real_in, real_out, dim=1) if append else  real_out
                 output = netD(real_concat)
@@ -186,14 +150,9 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
             ###########################
             with autograd.record():
 		sh = fake_latent.shape
-                #eps2 = nd.random_normal(loc=0, scale=1, shape=noiseshape, ctx=ctx) #
+		eps2 = nd.multiply(nd.power(sigma,2),nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx))
+                #eps2 = nd.random_normal(loc=0, scale=sigma.asscalar(), shape=fake_latent.shape, ctx=ctx) #
 		#eps = nd.random.uniform( low=-1, high=1, shape=noiseshape, ctx=ctx)
-		#if epoch>100:
-                #        eps2 = nd.multiply(eps2,sigma)+mu
-                #        eps2 = nd.tanh(eps2)
-                #else:
-                #eps = nd.random.uniform( low=-1, high=1, shape=noiseshape, ctx=ctx)
-                #eps2 = nd.concat(eps,eps2,dim=0)
 		rec_output = netD(netDe(eps2))
                 fake_latent= (netEn(real_in))
                 output2 = netD2(fake_latent)
@@ -204,8 +163,11 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
                 real_latent_label = nd.ones(output2.shape, ctx=ctx)
                 errG2 = GAN_loss(rec_output, real_label)
                 errR = L1_loss(real_out, fake_out) * lambda1
-                errG = 10.0*GAN_loss(output2, real_latent_label)+errG2+errR
-                errG.backward()
+		errG = 10.0*GAN_loss(output2, real_latent_label)+errG2+errR+nd.mean(nd.power(sigma,2))
+		errG.backward()
+	    if epoch>50:
+	    	sigma -= lr / sigma.shape[0] * sigma.grad
+	    	print(sigma)
             trainerDe.step(batch.data[0].shape[0])
             trainerEn.step(batch.data[0].shape[0])
             loss_rec_G2.append(nd.mean(errG2).asscalar())
@@ -277,6 +239,38 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
             visual.visualize(fake_img)
             plt.savefig('outputs/'+expname+'_fakes_'+str(epoch)+'.png')
             text_file.close()
+
+	    # Do 10 iterations of sampler update
+	    fake_img1T = nd.concat(real_in[0],real_out[0], fake_out[0], dim=1)
+            fake_img2T = nd.concat(real_in[1],real_out[1], fake_out[1], dim=1)
+            fake_img3T = nd.concat(real_in[2],real_out[2], fake_out[2], dim=1)
+            #fake_img4T = nd.concat(real_in[3],real_out[3], fake_out[3], dim=1)
+            fake_img = nd.concat(fake_img1,fake_img2, fake_img3,fake_img1T,fake_img2T, fake_img3T,dim=2)
+            visual.visualize(fake_img)
+            plt.savefig('outputs/'+expname+'_'+str(epoch)+'.png')
+	    '''if epoch > 100:
+	      for ep2 in range(10):
+	    	with autograd.record():
+                	#eps = nd.random_normal(loc=0, scale=1, shape=noiseshape, ctx=ctx) #
+			eps = nd.random.uniform( low=-1, high=1, shape=noiseshape, ctx=ctx)
+			eps2 = nd.random_normal(loc=0, scale=0.02, shape=noiseshape, ctx=ctx)
+                	eps2 = nd.tanh(eps2*sigma+mu)
+                	eps2 = nd.concat(eps,eps2,dim=0)
+			rec_output = netD(netDe(eps2))
+			fake_label = nd.zeros(rec_output.shape, ctx=ctx)
+                	errGS = GAN_loss(rec_output, fake_label)
+    			errGS.backward()
+		mu -= lr / mu.shape[0] * mu.grad
+		sigma -= lr / sigma.shape[0] * sigma.grad
+	    	print('mu ' + str(mu[0,0,0,0].asnumpy())+ '  sigma '+ str(sigma[0,0,0,0].asnumpy()))
+	    '''
+	    images = netDe(eps2)
+            fake_img1T = nd.concat(images[0],images[1], images[2], dim=1)
+            fake_img2T = nd.concat(images[3],images[4], images[5], dim=1)
+            fake_img3T = nd.concat(images[6],images[7], images[8], dim=1)
+            fake_img = nd.concat(fake_img1T,fake_img2T, fake_img3T,dim=2)
+            visual.visualize(fake_img)
+            plt.savefig('outputs/'+expname+'_fakespost_'+str(epoch)+'.png')
     return([loss_rec_D,loss_rec_G, loss_rec_R, acc_rec, loss_rec_D2, loss_rec_G2, acc2_rec])
 
 
@@ -313,7 +307,7 @@ def main(opt):
             print(netG)
         print('training')
         print(opt.epochs)
-        loss_vec = train(int(opt.continueEpochFrom), opt.pool_size, opt.epochs, train_data,val_data, ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
+        loss_vec = train(opt.pool_size, opt.epochs, train_data,val_data, ctx, netEn, netDe,  netD, netD2, trainerEn, trainerDe, trainerD, trainerD2, opt.lambda1, opt.batch_size, opt.expname,  opt.append, useAE = useAE)
         plt.gcf().clear()
 	fig, ax1 = plt.subplots()
 	ax1.plot(loss_vec[2], label="R", alpha= 0.7)

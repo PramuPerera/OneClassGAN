@@ -28,6 +28,20 @@ import argparse
 from skimage import exposure
 #logging.basicConfig()
 
+
+def heq(image, nbins ):
+    image = (image+1)*0.5
+    cdf, bin_centers = exposure.cumulative_distribution(image, nbins)
+    #cdf = np.insert(cdf,0,0)
+    #cdf = np.append(cdf,1)
+    #bin_centers = np.insert(bin_centers,0,0)
+    #bin_centers = np.append(bin_centers,1)
+    out = np.interp(image.flat, bin_centers, cdf)
+    out = (2*out)-1
+    return out.reshape(image.shape)
+
+
+
 def image_histogram_equalization(image, number_bins=256):
     # from http://www.janeriksolem.net/2009/06/histogram-equalization-with-python-and.html
 
@@ -108,19 +122,21 @@ def main(opt):
         real_out = batch.data[1].as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
 	code = netEn((real_out))
+	code=code+nd.random.normal(loc=0, scale=0.002, shape=code.shape,ctx=ctx)
         outnn = (netDe(code))
         out_concat =  nd.concat(real_out, outnn, dim=1) if opt.append else  outnn
         output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
-	code = netEn(real_in)
-	#code  = nd.clip(code,-1,1)
-	#eq_code = img_eq = exposure.equalize_hist(code.asnumpy(), nbins=8)
+	codet = netEn(real_in)
+	code=codet+nd.random.normal(loc=0, scale=0.0000001, shape=code.shape,ctx=ctx)
+	code2=codet+nd.random.normal(loc=0, scale=0.000001, shape=code.shape,ctx=ctx)
+	#eq_code = heq(code.asnumpy(),2)
 	#code = nd.array(eq_code, ctx=ctx)
-	#code = nd.ones_like(code,ctx=ctx)
         out = netDe(code)
+	out2 = netDe(code2)
         out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
-        output = netD(out_concat) #Denoised image
+        output = nd.mean((out-out2)**2, (1, 3, 2)).asnumpy() #netD(out_concat) #Denoised image
         output3 = nd.mean((out-real_out)**2, (1, 3, 2)).asnumpy() #denoised-real
-        output = nd.mean(output, (1, 3, 2)).asnumpy()
+        #output = nd.mean(output, (1, 3, 2)).asnumpy()
         out_concat =  nd.concat(real_out, real_out, dim=1) if opt. append else  real_out
 	
         output2 = netD2(code) #Image with no noise
@@ -168,7 +184,6 @@ def main(opt):
             inputT = nd.zeros((ltnt,ltnt,1,1),ctx=ctx)
             for i in range(0,ltnt):
                 inputT[i,i,:,:] = -1
-            print(inputT)
             out = netDe(inputT)
             count = 0
             for i in range(int(math.ceil(math.sqrt(ltnt)))):
