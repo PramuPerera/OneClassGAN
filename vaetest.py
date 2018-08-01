@@ -71,9 +71,9 @@ def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
     netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, latent=64,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, latent=64,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)
+    netDS = models.Discriminator(in_channels=3, n_layers =2 , ndf=16)
 
-
-    return netEn, netDe,  netD, netD2 
+    return netEn, netDe,  netD, netD2 ,netDS
 
 def main(opt):
     ctx = mx.gpu() if opt.use_gpu else mx.cpu()
@@ -102,11 +102,12 @@ def main(opt):
     print('loading pictures')
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
     print('picture loading done')
-    netEn,netDe, netD, netD2 = set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
+    netEn,netDe, netD, netD2 , netDS= set_network(opt.depth, ctx, 0, 0, opt.ndf, opt.ngf, opt.append)
     netEn.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_En.params', ctx=ctx)
     netDe.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_De.params', ctx=ctx)
     netD.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D.params', ctx=ctx)
     netD2.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_D2.params', ctx=ctx)
+    netDS.load_params('checkpoints/'+opt.expname+'_'+str(opt.epochs)+'_SD.params', ctx=ctx)
     print('Model loading done')
     lbllist = [];
     scorelist1 = [];
@@ -126,21 +127,21 @@ def main(opt):
         outnn = (netDe(code))
         out_concat =  nd.concat(real_out, outnn, dim=1) if opt.append else  outnn
         output4 = nd.mean((netD(out_concat)), (1, 3, 2)).asnumpy()    
-	codet = netEn(real_in)
-	code=codet+nd.random.normal(loc=0, scale=0.0000001, shape=code.shape,ctx=ctx)
-	code2=codet+nd.random.normal(loc=0, scale=0.000001, shape=code.shape,ctx=ctx)
+	code = netEn(real_in)
+	#code=codet+nd.random.normal(loc=0, scale=0.0000001, shape=code.shape,ctx=ctx)
+	#code2=codet+nd.random.normal(loc=0, scale=0.000001, shape=code.shape,ctx=ctx)
 	#eq_code = heq(code.asnumpy(),2)
 	#code = nd.array(eq_code, ctx=ctx)
         out = netDe(code)
-	out2 = netDe(code2)
+	#out2 = netDe(code2)
         out_concat =  nd.concat(real_in, out, dim=1) if opt.append else  out
-        output = nd.mean((out-out2)**2, (1, 3, 2)).asnumpy() #netD(out_concat) #Denoised image
+        output = netD(out_concat) #Denoised image
         output3 = nd.mean((out-real_out)**2, (1, 3, 2)).asnumpy() #denoised-real
-        #output = nd.mean(output, (1, 3, 2)).asnumpy()
+        output = nd.mean(output, (1, 3, 2)).asnumpy()
         out_concat =  nd.concat(real_out, real_out, dim=1) if opt. append else  real_out
 	
-        output2 = netD2(code) #Image with no noise
-        output2 = nd.mean(output2, (1)).asnumpy()
+        output2 = netDS(netDe(code)) #Image with no noise
+        output2 = nd.mean(output2, (1,3,2)).asnumpy()
         lbllist = lbllist+list(lbls.asnumpy())
         scorelist1 = scorelist1+list(output)
         scorelist2 = scorelist2+list(output2)
