@@ -42,7 +42,7 @@ def set_network(depth, ctx, lr, beta1, ndf, ngf,latent, append=True, solver='ada
     else:
         netD = models.Discriminator(in_channels=3, n_layers =2 , ndf=ndf)
         netD2 = models.LatentDiscriminator(in_channels=3, n_layers =2 , ndf=ndf)
-	netDS = models.Discriminator(in_channels=3, n_layers =2 , ndf=16)
+	netDS = models.Discriminator(in_channels=3, n_layers =2 , ndf=ngf)
         #netG = models.UnetGenerator(in_channels=3, num_downs =depth, ngf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
         #netD = models.Discriminator(in_channels=6, n_layers =depth-1, ndf=ngf/4)
         netEn = models.Encoder(in_channels=3, n_layers =depth,latent=latent, ndf=ngf)
@@ -86,7 +86,7 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
     acc2_rec = []
     loss_rec_D2 = []
     loss_rec_G2 = []
-    lr = 0.1*batch_size
+    lr = 2.0*batch_size
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
     logging.basicConfig(level=logging.DEBUG)
     if cep == -1:
@@ -117,7 +117,7 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
             fake_concat =  nd.concat(real_in, fake_out, dim=1) if append else  fake_out
 	    eps2 = nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
             if epoch > 150:# and epoch%10==0:
-	      mu = nd.random.uniform(low= -1, high=1, shape=(batch_size,64,1,1),ctx=ctx)
+	      mu = nd.random.uniform(low= -1, high=1, shape=fake_latent.shape,ctx=ctx)
     	      #isigma = nd.ones((batch_size,64,1,1),ctx=ctx)*0.000001
 	      mu.attach_grad()
 	      #sigma.attach_grad()
@@ -129,7 +129,7 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
               visual.visualize(fake_img)
               plt.savefig('outputs/'+expname+'_fakespre_'+str(epoch)+'.png')
 
-              for ep2 in range(5):
+              for ep2 in range(1):
                 with autograd.record():
                         #eps = nd.random_normal(loc=0, scale=1, shape=fake_latent.shape, ctx=ctx) #
                         eps2 = nd.tanh(mu) #+nd.multiply(eps,sigma))#nd.random.uniform( low=-1, high=1, shape=fake_latent.shape, ctx=ctx)
@@ -252,7 +252,7 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
 
         logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
         logging.info('time: %f' % (time.time() - tic))
-        if epoch%10 ==0:# and epoch>0:
+        if epoch%5 ==0:# and epoch>0:
             text_file = open(expname + "_validtest.txt", "a")
             filename = "checkpoints/"+expname+"_"+str(epoch)+"_D.params"
             netD.save_params(filename)
@@ -279,7 +279,7 @@ def train(cep , pool_size, epochs, train_data, val_data,  ctx, netEn, netDe,  ne
                 fake_out = y
                 metricMSE.update([fake_out, ], [real_out, ])
             _, acc2 = metricMSE.get()
-            text_file.write("%s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2)))
+            text_file.write("%s %s %s %s\n" % (str(epoch), nd.mean(errR).asscalar(), str(acc2), str(accStrong)))
             metricMSE.reset()
 	    images = netDe(eps2)
             fake_img1T = nd.concat(images[0],images[1], images[2], dim=1)
