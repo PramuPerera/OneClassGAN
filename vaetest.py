@@ -26,6 +26,7 @@ import visual
 import random
 import argparse
 from skimage import exposure
+import mean_image
 #logging.basicConfig()
 
 
@@ -68,10 +69,10 @@ def set_network(depth, ctx, lr, beta1, ndf,ngf, append=True):
             netD = models.Discriminator(in_channels=6, n_layers=depth-1, istest=True, ndf=ndf)
     else:        
             netD = models.Discriminator(in_channels=3, n_layers=depth-1, istest=True, ndf=ndf)
-    netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, latent=64,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
-    netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, latent=64,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netEn = models.Encoder(in_channels=3, n_layers=depth, istest=True, latent=4096,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
+    netDe = models.Decoder(in_channels=3, n_layers=depth, istest=True, latent=4096,ndf=ngf)  # UnetGenerator(in_channels=3, num_downs=8) #
     netD2 = models.LatentDiscriminator(in_channels=6, n_layers =2 , ndf=ndf)
-    netDS = models.Discriminator(in_channels=3, n_layers =2 , ndf=16)
+    netDS = models.Discriminator(in_channels=3, n_layers =2 , ndf=64)
 
     return netEn, netDe,  netD, netD2 ,netDS
 
@@ -94,11 +95,11 @@ def main(opt):
     c = list(zip(testclasslabels, testclasspaths))
     print('shuffling')
     random.shuffle(c)
-
-    #testclasslabels, testclasspaths = zip(*c)
+    im_mean = mean_image.load_mean( )
+    im_mean = im_mean.broadcast_to((opt.batch_size,np.shape(im_mean)[0], np.shape(im_mean)[1],np.shape(im_mean)[2]))#im_mean = nd.transpose(im_mean, (2, 0, 1))#testclasslabels, testclasspaths = zip(*c)
     #testclasslabels = testclasslabels[1:5000]
     #testclasspaths = testclasspaths[1:5000]
-    ltnt = 64
+    ltnt = 4096
     print('loading pictures')
     test_data = load_image.load_test_images(testclasspaths,testclasslabels,opt.batch_size, opt.img_wd, opt.img_ht, ctx, opt.noisevar)
     print('picture loading done')
@@ -119,8 +120,8 @@ def main(opt):
     for batch in (test_data):
         count+=1
 	print (str(count)) #, end="\r")
-        real_in = batch.data[0].as_in_context(ctx)
-        real_out = batch.data[1].as_in_context(ctx)
+        real_in = batch.data[0].as_in_context(ctx)-im_mean.as_in_context(ctx)
+        real_out = batch.data[1].as_in_context(ctx)-im_mean.as_in_context(ctx)
         lbls = batch.label[0].as_in_context(ctx)
 	code = netEn((real_out))
 	code=code+nd.random.normal(loc=0, scale=0.002, shape=code.shape,ctx=ctx)
@@ -165,6 +166,7 @@ def main(opt):
 	    roc_auc2 = auc(fpr, tpr)
 	    fpr, tpr, _ = roc_curve(lbllist, scorelist3, 1)
 	    roc_auc3 = auc(fpr, tpr)
+	    EER = fpr[np.nanargmin(np.absolute((1-tpr - fpr)))]
 	    fpr, tpr, _ = roc_curve(lbllist, scorelist4, 1)
 	    roc_auc4 = auc(fpr, tpr)
 	    plt.gcf().clear()
@@ -197,6 +199,7 @@ def main(opt):
             plt.savefig('outputs/atoms_'+opt.expname+'_.png')
 	    plt.gcf().clear()
             plt.clf()
+	    print(EER)
 	    return([roc_auc1, roc_auc2, roc_auc3, roc_auc4])
     else:
 	    return([0,0,0,0])
